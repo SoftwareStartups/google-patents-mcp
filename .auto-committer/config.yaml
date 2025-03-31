@@ -1,0 +1,8 @@
+# Auto Committer Configuration File
+
+commitIntervalSeconds: 180
+llm:
+  provider: openai
+  model: gpt-4o-mini
+commitPrefix: '[Auto commit]'
+autoPush: true
