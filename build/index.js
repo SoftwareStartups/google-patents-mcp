@@ -279,6 +279,7 @@ class GooglePatentsServer {
             const { name, arguments: args } = request.params;
             logger.debug(`CallTool handler called for tool: ${name} with args: ${JSON.stringify(args, null, 2)}`);
             if (name === 'search_patents') {
+                // --- 元のコードに戻す ---
                 const { q, ...otherParams } = args; // q は必須、その他はオプション
                 if (!q) {
                     logger.error('Missing required argument "q" for search_patents');
@@ -296,7 +297,9 @@ class GooglePatentsServer {
                         ...otherParams // 他のオプションパラメータを追加
                     });
                     const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // APIキーはログから隠す
+                    // ★★★ デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
+                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
+                    logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
                     // axios は既にトップレベルでインポートされている
                     const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
                     logger.info(`SerpApi request successful for query: "${q}"`);
@@ -315,6 +318,7 @@ class GooglePatentsServer {
                         throw new McpError(500, `An unexpected error occurred: ${error.message}`);
                     }
                 }
+                // --- 元のコードここまで ---
             }
             else {
                 logger.warn(`Received request for unknown tool: ${name}`);
