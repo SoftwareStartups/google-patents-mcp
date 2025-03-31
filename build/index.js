@@ -271,9 +271,7 @@ class GooglePatentsServer {
         // ツール実行リクエスト処理 - ここで search_patents を実装する
         logger.debug('Registering CallTool request handler');
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            // ★★★ ハンドラの本当に一番最初に console.log を追加 ★★★
-            console.log('<<<< RAW CallToolRequest RECEIVED (console.log) >>>>');
-            // ハンドラが呼び出されたことを最初にログ出力 (winston)
+            // ハンドラが呼び出されたことをログ出力 (winston)
             logger.debug('<<<< CallToolRequestSchema handler invoked (winston) >>>>');
             logger.debug(`Received request object: ${JSON.stringify(request, null, 2)}`); // リクエスト全体もログ出力
             const { name, arguments: args } = request.params;
@@ -290,15 +288,16 @@ class GooglePatentsServer {
                     throw new McpError(500, 'Server configuration error: SERPAPI_API_KEY is missing.');
                 }
                 try {
+                    // ★★★ tryブロック開始直後にも console.log を追加 ★★★
+                    console.log('[DEBUG] Entered API call try block');
+                    // ★★★ パラメータを単純化（q と api_key のみ） ★★★
                     const searchParams = new URLSearchParams({
                         engine: 'google_patents',
                         q: q,
-                        api_key: SERPAPI_API_KEY,
-                        ...otherParams // 他のオプションパラメータを追加
+                        api_key: SERPAPI_API_KEY
+                        // ...otherParams // 他のオプションパラメータを一時的に除外
                     });
                     const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    // ★★★ デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
-                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
                     logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
                     // axios は既にトップレベルでインポートされている
                     const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
