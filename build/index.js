@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import * as fs from 'fs';
-import axios from 'axios'; // Import axios at the top
+// import axios from 'axios'; // Temporarily commented out
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // ロガーのフォーマット設定を共通化
@@ -26,10 +26,10 @@ const initialLogger = winston.createLogger({
 });
 // MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
 // MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
-// .env ファイルの読み込みロジックを削除
+// .env ファイルの読み込みロジックは削除済み
 // SERPAPI_API_KEY は環境変数からのみ取得する
 // ログレベルの明示的な確認（デバッグ用）
-console.log(`Environment variable LOG_LEVEL: ${process.env.LOG_LEVEL}`);
+// console.log(`Environment variable LOG_LEVEL: ${process.env.LOG_LEVEL}`); // Temporarily commented out
 initialLogger.debug(`Current initial logger level: ${initialLogger.level}`);
 // ログファイルパスを決定するシンプルな方法
 let logFilePath = null;
@@ -173,17 +173,17 @@ process.on('uncaughtException', (err) => {
     flushLog();
     process.exit(1);
 });
-// SerpApi APIキーを環境変数 SERPAPI_API_KEY から取得
-const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY;
-if (!SERPAPI_API_KEY) {
-    logger.error('Error: SERPAPI_API_KEY environment variable is not set.');
-    logger.debug('Missing required SERPAPI_API_KEY environment variable, exiting');
-    process.exit(1);
-}
-else {
-    logger.info('SERPAPI_API_KEY found.');
-    logger.debug('SERPAPI_API_KEY is set (value hidden for security).');
-}
+// Temporarily comment out API Key check
+// const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY;
+// if (!SERPAPI_API_KEY) {
+//     logger.error('Error: SERPAPI_API_KEY environment variable is not set.');
+//     logger.debug('Missing required SERPAPI_API_KEY environment variable, exiting');
+//     process.exit(1);
+// } else {
+//     logger.info('SERPAPI_API_KEY found.');
+//     logger.debug('SERPAPI_API_KEY is set (value hidden for security).');
+// }
+const SERPAPI_API_KEY = "dummy"; // Add a dummy value to avoid undefined errors later if needed by other parts (though CallTool is disabled)
 // Base64 エンコード／デコード ヘルパー関数
 function encodeText(text) {
     return Buffer.from(text, 'utf8').toString('base64');
@@ -221,96 +221,81 @@ class GooglePatentsServer {
         // ツールリストの設定
         logger.debug('Registering ListTools request handler');
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-            logger.debug('ListTools handler called');
-            return {
-                tools: [
-                    {
-                        name: 'search_patents',
-                        description: 'Searches Google Patents using SerpApi. Allows filtering by date, inventor, assignee, country, language, status, type, and sorting.',
-                        inputSchema: {
-                            type: 'object',
-                            properties: {
-                                q: { type: 'string', description: 'Search query (required). Use semicolon (;) to separate multiple terms.' },
-                                page: { type: 'integer', description: 'Page number for pagination (default: 1).', default: 1 },
-                                num: { type: 'integer', description: 'Number of results per page (min: 10, max: 100, default: 10).', default: 10, minimum: 10, maximum: 100 },
-                                sort: { type: 'string', enum: ['relevance', 'new', 'old'], description: "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).", default: 'relevance' },
-                                before: { type: 'string', description: "Maximum date filter (e.g., 'publication:20231231', 'filing:20220101'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
-                                after: { type: 'string', description: "Minimum date filter (e.g., 'publication:20230101', 'filing:20220601'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
-                                inventor: { type: 'string', description: 'Filter by inventor names. Separate multiple names with a comma (,).' },
-                                assignee: { type: 'string', description: 'Filter by assignee names. Separate multiple names with a comma (,).' },
-                                country: { type: 'string', description: "Filter by country codes (e.g., 'US', 'WO,JP'). Separate multiple codes with a comma (,)." },
-                                language: { type: 'string', description: "Filter by language (e.g., 'ENGLISH', 'JAPANESE,GERMAN'). Separate multiple languages with a comma (,). Supported: ENGLISH, GERMAN, CHINESE, FRENCH, SPANISH, ARABIC, JAPANESE, KOREAN, PORTUGUESE, RUSSIAN, ITALIAN, DUTCH, SWEDISH, FINNISH, NORWEGIAN, DANISH." },
-                                status: { type: 'string', enum: ['GRANT', 'APPLICATION'], description: "Filter by patent status: 'GRANT' or 'APPLICATION'." },
-                                type: { type: 'string', enum: ['PATENT', 'DESIGN'], description: "Filter by patent type: 'PATENT' or 'DESIGN'." },
-                                scholar: { type: 'boolean', description: 'Include Google Scholar results (default: false).', default: false }
-                            },
-                            required: ['q']
-                        }
-                    }
-                ]
-            };
+            // ★★★ 基本動作確認のため、空のツールリストを返す ★★★
+            logger.debug('ListTools handler called (basic test)');
+            return { tools: [] };
         });
         // ツール実行リクエスト処理 - ここで search_patents を実装する
         logger.debug('Registering CallTool request handler');
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+            // ★★★ 基本動作確認のため、常にエラーを返す ★★★
+            const { name } = request.params;
+            logger.debug(`CallTool handler called for tool: ${name} (basic test)`);
+            logger.warn(`Tool execution is temporarily disabled for basic communication test.`);
+            throw new McpError(501, `Tool '${name}' not implemented in basic test mode.`);
+            /* --- 元のツール実行コード (コメントアウト) ---
             // ハンドラが呼び出されたことをログ出力 (winston)
             logger.debug('<<<< CallToolRequestSchema handler invoked (winston) >>>>');
             logger.debug(`Received request object: ${JSON.stringify(request, null, 2)}`); // リクエスト全体もログ出力
-            const { name, arguments: args } = request.params;
-            logger.debug(`CallTool handler called for tool: ${name} with args: ${JSON.stringify(args, null, 2)}`);
-            if (name === 'search_patents') {
-                // --- 元のコードに戻す ---
-                const { q, ...otherParams } = args; // q は必須、その他はオプション
-                if (!q) {
-                    logger.error('Missing required argument "q" for search_patents');
-                    throw new McpError(400, 'Missing required argument: q');
+            const { name: toolName, arguments: args } = request.params; // 変数名を変更
+            logger.debug(`CallTool handler called for tool: ${toolName} with args: ${JSON.stringify(args, null, 2)}`);
+      
+            if (toolName === 'search_patents') {
+              // --- 元のコードに戻す ---
+              const { q, ...otherParams } = args; // q は必須、その他はオプション
+              if (!q) {
+                logger.error('Missing required argument "q" for search_patents');
+                throw new McpError(400, 'Missing required argument: q');
+              }
+              // APIキーチェックは一時的にコメントアウト解除しない
+              // if (!SERPAPI_API_KEY) {
+              //   logger.error('SERPAPI_API_KEY is not configured.');
+              //   throw new McpError(500, 'Server configuration error: SERPAPI_API_KEY is missing.');
+              // }
+      
+              try {
+                console.log('[DEBUG] Entered API call try block'); // tryブロック開始
+                // パラメータを構築 (必須パラメータ)
+                const searchParams = new URLSearchParams({
+                  engine: 'google_patents',
+                  q: q,
+                  api_key: SERPAPI_API_KEY // APIキーはダミーでも渡す必要があるかもしれない
+                });
+                // オプションパラメータを安全に追加
+                for (const [key, value] of Object.entries(otherParams)) {
+                  if (value !== undefined) {
+                    searchParams.append(key, String(value)); // 値を文字列に変換
+                  }
                 }
-                if (!SERPAPI_API_KEY) {
-                    logger.error('SERPAPI_API_KEY is not configured.');
-                    throw new McpError(500, 'Server configuration error: SERPAPI_API_KEY is missing.');
-                }
-                try {
-                    console.log('[DEBUG] Entered API call try block'); // tryブロック開始
-                    // パラメータを構築 (必須パラメータ)
-                    const searchParams = new URLSearchParams({
-                        engine: 'google_patents',
-                        q: q,
-                        api_key: SERPAPI_API_KEY
-                    });
-                    // オプションパラメータを安全に追加
-                    for (const [key, value] of Object.entries(otherParams)) {
-                        if (value !== undefined) {
-                            searchParams.append(key, String(value)); // 値を文字列に変換
-                        }
-                    }
-                    const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    // ★★★ デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
-                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
-                    logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
-                    // axios は既にトップレベルでインポートされている
-                    const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
-                    logger.info(`SerpApi request successful for query: "${q}"`);
-                    logger.debug(`SerpApi response status: ${response.status}`);
-                    // レスポンスを type: 'text' の JSON 文字列として返す
-                    return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
-                }
-                catch (error) {
-                    logger.error(`Error calling SerpApi for query "${q}": ${error.message}`);
-                    if (axios.isAxiosError(error)) {
-                        logger.error(`Axios error details: status=${error.response?.status}, data=${JSON.stringify(error.response?.data)}`);
-                        throw new McpError(error.response?.status || 500, `SerpApi request failed: ${error.message}`);
-                    }
-                    else {
-                        logger.error(`Unexpected error: ${error.stack}`);
-                        throw new McpError(500, `An unexpected error occurred: ${error.message}`);
-                    }
-                }
-                // --- 元のコードここまで ---
+                const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+                // ★★★ デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
+                console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
+                logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
+      
+                // axios は既にトップレベルでインポートされている
+                // const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
+                // logger.info(`SerpApi request successful for query: "${q}"`);
+                // logger.debug(`SerpApi response status: ${response.status}`);
+                // // レスポンスを type: 'text' の JSON 文字列として返す
+                // return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
+                throw new Error("API call temporarily disabled for basic test"); // 一時的にエラーを投げる
+      
+              } catch (error: any) {
+                logger.error(`Error calling SerpApi for query "${q}": ${error.message}`);
+                // if (axios.isAxiosError(error)) { // axios を使わないのでコメントアウト
+                //   logger.error(`Axios error details: status=${error.response?.status}, data=${JSON.stringify(error.response?.data)}`);
+                //   throw new McpError(error.response?.status || 500, `SerpApi request failed: ${error.message}`);
+                // } else {
+                  logger.error(`Unexpected error: ${error.stack}`);
+                  throw new McpError(500, `An unexpected error occurred: ${error.message}`);
+                // }
+              }
+              // --- 元のコードここまで ---
+            } else {
+              logger.warn(`Received request for unknown tool: ${name}`);
+              throw new McpError(404, `Unknown tool: ${name}`);
             }
-            else {
-                logger.warn(`Received request for unknown tool: ${name}`);
-                throw new McpError(404, `Unknown tool: ${name}`);
-            }
+            */
         });
     }
     async run() {
