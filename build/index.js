@@ -287,7 +287,8 @@ class GooglePatentsServer {
                         }
                     }
                     const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    // console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`); // デバッグ用console.log削除
+                    // ★★★ 再度デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
+                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
                     logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
                     // Use node-fetch with AbortController for timeout (controller と timeoutId は上で定義済み)
                     const response = await fetch(apiUrl, { signal: controller.signal });
