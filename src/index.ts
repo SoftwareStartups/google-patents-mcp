@@ -4,12 +4,13 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 import child_process from 'child_process';
 import * as dotenv from 'dotenv';
-import winston from 'winston';
+import * as winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import * as fs from 'fs';
 import os from 'os'; // Import the os module
+import axios from 'axios'; // Import axios at the top
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,13 +35,14 @@ const initialLogger = winston.createLogger({
 });
 
 // MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
-if (!process.env.CLAUDE_BIN) {
+// MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
+if (!process.env.SERPAPI_API_KEY) {
   const envPaths = [
     path.resolve(__dirname, '../.env'),                    // 開発環境
     path.resolve(__dirname, '../../.env'),                 // ビルド後の環境
     path.resolve(process.cwd(), '.env'),                   // カレントディレクトリの .env
-    path.resolve(process.cwd(), 'claude-code-server/.env'), // プロジェクトサブディレクトリの .env (後方互換性)
-    path.resolve(os.homedir(), '.claude-code-mcp.env')     // ホームディレクトリの .claude-code-mcp.env
+    path.resolve(process.cwd(), 'google-patents-server/.env'), // プロジェクトサブディレクトリの .env (後方互換性)
+    path.resolve(os.homedir(), '.google-patents-mcp.env')     // ホームディレクトリの .google-patents-mcp.env
   ];
 
   for (const envPath of envPaths) {
@@ -50,11 +52,11 @@ if (!process.env.CLAUDE_BIN) {
         initialLogger.error(`Failed to load .env file from ${envPath}: ${result.error.message}`);
       } else {
         initialLogger.info(`Successfully loaded .env file from ${envPath}`);
-        initialLogger.debug(`Loaded environment variables: LOG_LEVEL=${process.env.LOG_LEVEL}, CLAUDE_BIN=${process.env.CLAUDE_BIN}`);
+        initialLogger.debug(`Loaded environment variables: LOG_LEVEL=${process.env.LOG_LEVEL}, SERPAPI_API_KEY=****`); // APIキーはログに出力しない
         break;
       }
     } else {
-      initialLogger.debug(`CLAUDE_BIN fallback search: environment file at ${envPath} does not exist [MCP Host settings: not found]`);
+      initialLogger.debug(`SERPAPI_API_KEY fallback search: environment file at ${envPath} does not exist [MCP Host settings: not found]`);
     }
   }
 }
@@ -68,7 +70,7 @@ let logFilePath: string | null = null;
 
 // 1. まずプロジェクトルートに書き込みを試みる
 try {
-  const projectLogPath = path.resolve(__dirname, '../../claude-code-server.log');
+  const projectLogPath = path.resolve(__dirname, '../../google-patents-server.log');
   initialLogger.debug(`Attempting to write to project root log: ${projectLogPath}`);
   fs.writeFileSync(projectLogPath, `# Log file initialization at ${new Date().toISOString()}\n`, { flag: 'a' });
   logFilePath = projectLogPath;
@@ -82,7 +84,7 @@ try {
   try {
     const homeDir = process.env.HOME || process.env.USERPROFILE;
     if (homeDir) {
-      const homeLogPath = path.resolve(homeDir, '.claude-code-server.log');
+      const homeLogPath = path.resolve(homeDir, '.google-patents-server.log');
       initialLogger.debug(`Attempting to write to home directory log: ${homeLogPath}`);
       fs.writeFileSync(homeLogPath, `# Log file initialization at ${new Date().toISOString()}\n`, { flag: 'a' });
       console.log(`Created log file in home directory: ${homeLogPath}`);
@@ -95,7 +97,7 @@ try {
 
     // 3. 最後に/tmpに試す
     try {
-      const tmpPath = '/tmp/claude-code-server.log';
+      const tmpPath = '/tmp/google-patents-server.log';
       initialLogger.debug(`Attempting to write to temp directory log: ${tmpPath}`);
       fs.writeFileSync(tmpPath, `# Log file initialization at ${new Date().toISOString()}\n`, { flag: 'a' });
       logFilePath = tmpPath;
@@ -158,7 +160,7 @@ if (logFilePath) {
 }
 
 // 起動時にシンプルなログを書き込み
-logger.info('=== Claude Code Server started ===');
+logger.info('=== Google Patents Server started ===');
 logger.debug('Server initialization sequence started');
 
 // ファイル情報の診断 - デバッグモードでのみ詳細表示
@@ -219,29 +221,16 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// claudeコマンドのパスを環境変数 CLAUDE_BIN から取得
-const CLAUDE_BIN = process.env.CLAUDE_BIN;
+// SerpApi APIキーを環境変数 SERPAPI_API_KEY から取得
+const SERPAPI_API_KEY = process.env.SERPAPI_API_KEY;
 
-if (!CLAUDE_BIN) {
-    logger.error('Error: CLAUDE_BIN environment variable is not set.');
-    logger.debug('Missing required CLAUDE_BIN environment variable, exiting');
+if (!SERPAPI_API_KEY) {
+    logger.error('Error: SERPAPI_API_KEY environment variable is not set.');
+    logger.debug('Missing required SERPAPI_API_KEY environment variable, exiting');
     process.exit(1);
-}
-
-// 実行前にClaude CLIの存在を確認し、バージョンも出力
-if (CLAUDE_BIN) {
-    try {
-        logger.debug(`Checking Claude CLI at path: ${CLAUDE_BIN}`);
-        const versionOutput = child_process.execSync(`${CLAUDE_BIN} --version`, { encoding: 'utf8' });
-        logger.info(`Claude CLI found: ${versionOutput.trim()}`);
-        logger.debug(`Claude CLI version details: ${versionOutput.trim()}`);
-    }
-    catch (err) {
-        logger.error(`Warning: Unable to execute Claude CLI (${CLAUDE_BIN}). Error details:`, err);
-        logger.debug(`PATH environment: ${process.env.PATH}`);
-        logger.debug(`Failed to execute Claude CLI: ${err instanceof Error ? err.stack : String(err)}`);
-        // プログラムは続行します - ランタイムでも再チェックします
-    }
+} else {
+    logger.info('SERPAPI_API_KEY found.');
+    logger.debug('SERPAPI_API_KEY is set (value hidden for security).');
 }
 
 // Base64 エンコード／デコード ヘルパー関数
@@ -253,14 +242,14 @@ function decodeText(encoded: string): string {
     return Buffer.from(encoded, 'base64').toString('utf8');
 }
 
-class ClaudeCodeServer {
+class GooglePatentsServer {
   private server: Server;
 
   constructor() {
-    logger.debug('Initializing Claude Code Server');
+    logger.debug('Initializing Google Patents Server');
     this.server = new Server(
       {
-        name: 'claude-code-server',
+        name: 'google-patents-server',
         version: '0.1.0',
       },
       {
@@ -285,7 +274,7 @@ class ClaudeCodeServer {
       process.exit(0);
     });
 
-    logger.debug('Claude Code Server initialization completed');
+    logger.debug('Google Patents Server initialization completed');
   }
 
   private setupToolHandlers() {
@@ -385,210 +374,68 @@ class ClaudeCodeServer {
 
     // ツール実行リクエスト処理
     logger.debug('Registering CallTool request handler');
+    // ツール実行リクエスト処理 - ここで search_patents を実装する
+    logger.debug('Registering CallTool request handler');
     this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
       logger.debug(`CallTool handler called for tool: ${name} with args: ${JSON.stringify(args, null, 2)}`);
 
-      const runClaudeCommand = (claudeArgs: string[], stdinInput?: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          // タイムアウト設定 (5分)
-          const timeoutMs = 5 * 60 * 1000;
-          let timeoutId: NodeJS.Timeout;
-
-          try {
-            // より詳細なデバッグ情報
-            logger.debug(`Executing Claude CLI at path: ${CLAUDE_BIN}`);
-            logger.debug(`Claude CLI arguments: ${JSON.stringify(claudeArgs)}`);
-            if (stdinInput) logger.debug(`Input length: ${stdinInput.length} characters`);
-
-            // 環境変数をログに出力
-            logger.debug(`Environment PATH: ${process.env.PATH}`);
-
-            const proc = child_process.spawn(CLAUDE_BIN!, claudeArgs, {
-                env: { ...process.env },
-                stdio: ['pipe', 'pipe', 'pipe']
-            }) as child_process.ChildProcess;
-
-            // 標準入力がある場合は書き込みと終了
-            if (stdinInput) {
-                proc.stdin!.write(stdinInput);
-                proc.stdin!.end();
-                logger.debug('Wrote input to Claude CLI stdin');
-            }
-
-            let stdout = '';
-            let stderr = '';
-
-            proc.stdout!.on('data', (data: string) => {
-                const chunk = data.toString();
-                stdout += chunk;
-                logger.debug(`Received stdout chunk: ${chunk.length} bytes`);
-            });
-
-            proc.stderr!.on('data', (data: string) => {
-                const chunk = data.toString();
-                stderr += chunk;
-                logger.error(`Claude stderr: ${chunk}`);
-                logger.debug(`Claude stderr output: ${chunk}`);
-            });
-
-            // タイムアウト設定
-            timeoutId = setTimeout(() => {
-                logger.error(`Command timed out after ${timeoutMs/1000} seconds`);
-                logger.debug('Killing process due to timeout');
-                proc.kill();
-                reject(new Error(`Command timed out after ${timeoutMs / 1000} seconds`));
-            }, timeoutMs);
-
-            proc.on('close', (code: number) => {
-                clearTimeout(timeoutId);
-                logger.debug(`Claude process closed with code: ${code}`);
-                if (code === 0) {
-                    logger.debug(`Claude command completed successfully, output length: ${stdout.length} bytes`);
-                    resolve(stdout.trim());
-                }
-                else {
-                    logger.error(`Command failed with code ${code}`);
-                    logger.debug(`stderr: ${stderr}`);
-                    reject(new Error(`Command failed with code ${code}: ${stderr}`));
-                }
-            });
-
-            proc.on('error', (err: Error) => {
-                clearTimeout(timeoutId);
-                logger.error("Process spawn error:", err);
-                logger.debug(`Process error details: ${err.stack}`);
-                reject(err);
-            });
-          } catch (err) {
-            logger.error("Failed to spawn process:", err);
-            logger.debug(`Spawn failure details: ${err instanceof Error ? err.stack : String(err)}`);
-            reject(err);
-          }
-        });
-      };
-
-      try {
-        // 文字列の最大長さを制限する関数
-        const truncateIfNeeded = (str: string, maxLength = 10000): string => {
-          if (str.length > maxLength) {
-            logger.warn(`Warning: Input too long, truncating (${str.length} -> ${maxLength})`);
-            return str.substring(0, maxLength) + "... [truncated]";
-          }
-          return str;
-        };
-
-        // エラーを適切に処理するために各ケースを try-catch で囲む
-        switch (name) {
-          case 'explain_code': {
-            const { code, context } = args;
-            try {
-              logger.debug(`Processing explain_code request, code length: ${code.length}`);
-              const encodedCode = encodeText(truncateIfNeeded(code));
-              logger.debug(`Code encoded to base64, length: ${encodedCode.length}`);
-              // ファイルを使用して大きな入力を渡す場合の代替方法
-              const prompt = `You are super professional engineer. Please kindly provide a detailed explanation of the following Base64 encoded code:\n\n${encodedCode}\n\nAdditional context (if provided):\n${context || 'No additional context provided.'}`;
-              logger.debug('Calling Claude CLI with prompt');
-              const output = await runClaudeCommand(['--print'], prompt);
-              logger.debug(`Received response from Claude, length: ${output.length}`);
-              return { content: [{ type: 'text', text: output }] };
-            } catch (err) {
-              logger.error("Error in explain_code:", err);
-              logger.debug(`explain_code error details: ${err instanceof Error ? err.stack : String(err)}`);
-              throw err;
-            }
-          }
-          case 'review_code': {
-            const { code, focus_areas } = args;
-            try {
-              logger.debug(`Processing review_code request, code length: ${code.length}`);
-              const encodedCode = encodeText(truncateIfNeeded(code));
-              logger.debug(`Code encoded to base64, length: ${encodedCode.length}`);
-              const prompt = `You are super professional engineer. Please review the following Base64 encoded code. Consider code readability, efficiency, potential bugs, and security vulnerabilities.\n\nCode:\n${encodedCode}\n\nFocus areas (if provided):\n${focus_areas || 'No specific focus areas provided.'}`;
-              logger.debug('Calling Claude CLI with prompt');
-              const output = await runClaudeCommand(['--print'], prompt);
-              logger.debug(`Received response from Claude, length: ${output.length}`);
-              return { content: [{ type: 'text', text: output }] };
-            } catch (err) {
-              logger.error("Error in review_code:", err);
-              logger.debug(`review_code error details: ${err instanceof Error ? err.stack : String(err)}`);
-              throw err;
-            }
-          }
-          case 'fix_code': {
-            const { code, issue_description } = args;
-            logger.debug(`Processing fix_code request, code length: ${code.length}`);
-            const encodedCode = encodeText(truncateIfNeeded(code));
-            logger.debug(`Code encoded to base64, length: ${encodedCode.length}`);
-            const prompt = `You are super professional engineer. Please fix the following Base64 encoded code, addressing the issue described below:\n\nCode:\n${encodedCode}\n\nIssue description:\n${issue_description ?? 'No specific issue described.'}`;
-            logger.debug('Calling Claude CLI with prompt');
-            const output = await runClaudeCommand(['--print'], prompt);
-            logger.debug(`Received response from Claude, length: ${output.length}`);
-            return { content: [{ type: 'text', text: output }] };
-          }
-          case 'edit_code': {
-            const { code, instructions } = args;
-            logger.debug(`Processing edit_code request, code length: ${code.length}`);
-            const encodedCode = encodeText(truncateIfNeeded(code));
-            logger.debug(`Code encoded to base64, length: ${encodedCode.length}`);
-            const prompt = `You are super professional engineer. Please edit the following Base64 encoded code according to the instructions provided:\n\nCode:\n${encodedCode}\n\nInstructions:\n${instructions ?? 'No specific instructions provided.'}`;
-            logger.debug('Calling Claude CLI with prompt');
-            const output = await runClaudeCommand(['--print'], prompt);
-            logger.debug(`Received response from Claude, length: ${output.length}`);
-            return { content: [{ type: 'text', text: output }] };
-          }
-          case 'test_code': {
-            const { code, test_framework } = args;
-            logger.debug(`Processing test_code request, code length: ${code.length}`);
-            const encodedCode = encodeText(truncateIfNeeded(code));
-            logger.debug(`Code encoded to base64, length: ${encodedCode.length}`);
-            const framework = test_framework || 'default';
-            const prompt = `You are super professional engineer. Please generate tests for the following Base64 encoded code.\n\nCode:\n${encodedCode}\n\nTest framework (if specified):\n${framework || 'No specific framework provided. Please use a suitable default framework.'}`;
-            logger.debug('Calling Claude CLI with prompt');
-            const output = await runClaudeCommand(['--print'], prompt);
-            logger.debug(`Received response from Claude, length: ${output.length}`);
-            return { content: [{ type: 'text', text: output }] };
-          }
-          case 'simulate_command': {
-            const { command, input } = args;
-            logger.debug(`Processing simulate_command request, command: ${command}`);
-            const prompt = `You are super professional engineer. Simulate the execution of the following command:\n\nCommand: ${command}\n\nInput: ${input || 'No input provided.'}\n\nDescribe the expected behavior and output, without actually executing the command.`;
-            logger.debug('Calling Claude CLI with prompt');
-            const output = await runClaudeCommand(['--print'], prompt);
-            logger.debug(`Received response from Claude, length: ${output.length}`);
-            return { content: [{ type: 'text', text: output }] };
-          }
-          case 'your_own_query': {
-            const { query, context } = args;
-            logger.debug(`Processing your_own_query request, query length: ${query.length}`);
-            const prompt = `Query: ${query} ${context || ''}`;
-            logger.debug('Calling Claude CLI with prompt');
-            const output = await runClaudeCommand(['--print'], prompt);
-            logger.debug(`Received response from Claude, length: ${output.length}`);
-            return { content: [{ type: 'text', text: output }] };
-          }
-          default:
-            throw new McpError(404, "Unknown tool: " + name);
+      if (name === 'search_patents') {
+        const { q, ...otherParams } = args; // q は必須、その他はオプション
+        if (!q) {
+          logger.error('Missing required argument "q" for search_patents');
+          throw new McpError(400, 'Missing required argument: q');
         }
-      } catch (err) {
-        logger.error("Error executing tool:", err);
-        logger.debug(`Tool execution error details: ${err instanceof Error ? err.stack : String(err)}`);
-        throw new McpError(500, err instanceof Error ? err.message : String(err));
+        if (!SERPAPI_API_KEY) {
+          logger.error('SERPAPI_API_KEY is not configured.');
+          throw new McpError(500, 'Server configuration error: SERPAPI_API_KEY is missing.');
+        }
+
+        try {
+          const searchParams = new URLSearchParams({
+            engine: 'google_patents',
+            q: q,
+            api_key: SERPAPI_API_KEY,
+            ...otherParams // 他のオプションパラメータを追加
+          });
+          const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+          logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // APIキーはログから隠す
+
+          // axios は既にトップレベルでインポートされている
+          const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
+          logger.info(`SerpApi request successful for query: "${q}"`);
+          logger.debug(`SerpApi response status: ${response.status}`);
+          // レスポンス全体を返す（必要に応じて整形）
+          return { content: [{ type: 'json', json: response.data }] };
+
+        } catch (error: any) {
+          logger.error(`Error calling SerpApi for query "${q}": ${error.message}`);
+          if (axios.isAxiosError(error)) {
+            logger.error(`Axios error details: status=${error.response?.status}, data=${JSON.stringify(error.response?.data)}`);
+            throw new McpError(error.response?.status || 500, `SerpApi request failed: ${error.message}`);
+          } else {
+            logger.error(`Unexpected error: ${error.stack}`);
+            throw new McpError(500, `An unexpected error occurred: ${error.message}`);
+          }
+        }
+      } else {
+        logger.warn(`Received request for unknown tool: ${name}`);
+        throw new McpError(404, `Unknown tool: ${name}`);
       }
     });
   }
 
-  async run() {
-    logger.debug('Starting Claude Code MCP server');
+  async run() { // async は axios の await のために必要
+    logger.debug('Starting Google Patents MCP server');
     const transport = new StdioServerTransport();
     logger.debug('Created StdioServerTransport');
     await this.server.connect(transport);
-    logger.info("Claude Code MCP server running on stdio");
+    logger.info("Google Patents MCP server running on stdio");
     logger.debug('Server connected to transport and ready to process requests');
   }
 }
 
-const server = new ClaudeCodeServer();
+const server = new GooglePatentsServer();
 server.run().catch((err) => {
   logger.error('Failed to start server:', err);
   logger.debug(`Server start failure details: ${err instanceof Error ? err.stack : String(err)}`);
