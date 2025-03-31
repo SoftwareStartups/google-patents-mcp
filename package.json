@@ -1,9 +1,12 @@
 {
-  "name": "google-patents-server",
+  "name": "@kunihiros/google-patents-mcp",
   "version": "0.1.0",
   "description": "MCP server for searching Google Patents via SerpApi",
   "main": "build/index.js",
   "type": "module",
+  "bin": {
+    "google-patents-mcp": "build/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js",
@@ -15,8 +18,22 @@
     "serpapi",
     "google patents"
   ],
-  "author": "Your Name or Scope",
+  "author": "Kunihiro Sasayama",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KunihiroS/google-patents-mcp.git"
+  },
+  "homepage": "https://github.com/KunihiroS/google-patents-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/KunihiroS/google-patents-mcp/issues"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
     "axios": "^1.7.2",
