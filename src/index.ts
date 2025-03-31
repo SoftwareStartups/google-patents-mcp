@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 import child_process from 'child_process';
 import * as dotenv from 'dotenv';
-import * as winston from 'winston';
+import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -285,87 +285,19 @@ class GooglePatentsServer {
       return {
         tools: [
           {
-            name: 'explain_code',
-            description: 'Provides detailed explanation of the given code.',
+            name: 'search_patents',
+            description: 'Searches Google Patents using SerpApi.',
             inputSchema: {
               type: 'object',
               properties: {
-                code: { type: 'string', description: 'Target code' },
-                context: { type: 'string', description: 'Additional context', default: '' }
+                q: { type: 'string', description: 'Search query (required)' },
+                // ここにSerpApiの他のパラメータを追加可能 (例: num, start, etc.)
+                // https://serpapi.com/google-patents-api を参照
+                num: { type: 'integer', description: 'Number of results to return (e.g., 10, 20, 30...). Default is 10.' },
+                start: { type: 'integer', description: 'Result offset for pagination. Default is 0.' },
+                // 他のパラメータも必要に応じて追加...
               },
-              required: ['code']
-            }
-          },
-          {
-            name: 'review_code',
-            description: 'Reviews the given code.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', description: 'Code to review' },
-                focus_areas: { type: 'string', description: 'Areas to focus on', default: '' }
-              },
-              required: ['code']
-            }
-          },
-          {
-            name: 'fix_code',
-            description: 'Fixes bugs or issues in the given code.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', description: 'Code to fix' },
-                issue_description: { type: 'string', description: 'Description of the issue' }
-              },
-              required: ['code', 'issue_description']
-            }
-          },
-          {
-            name: 'edit_code',
-            description: 'Edits the given code based on instructions.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', description: 'Code to edit' },
-                instructions: { type: 'string', description: 'Editing instructions' }
-              },
-              required: ['code', 'instructions']
-            }
-          },
-          {
-            name: 'test_code',
-            description: 'Generates tests for the given code.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', description: 'Code to test' },
-                test_framework: { type: 'string', description: 'Test framework to use', default: '' }
-              },
-              required: ['code']
-            }
-          },
-          {
-            name: 'simulate_command',
-            description: 'Simulates the execution of a given command.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                command: { type: 'string', description: 'Command to execute' },
-                input: { type: 'string', description: 'Input data', default: '' }
-              },
-              required: ['command']
-            }
-          },
-          {
-            name: 'your_own_query',
-            description: 'Sends a custom query with context.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                query: { type: 'string', description: 'Query text' },
-                context: { type: 'string', description: 'Additional context', default: '' }
-              },
-              required: ['query']
+              required: ['q']
             }
           }
         ]
