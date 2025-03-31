@@ -99,3 +99,22 @@ sequenceDiagram
         deactivate Server
     end
 ```
+
+## 7. サンプルMCP Hpst設定
+
+```json
+{
+  "mcpServers": {
+	"google-patents-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@kunihiros/google-patents-mcp"
+      ],
+      "env": {
+        "SERP_API_KEY": "{SERP_API_KEY}"
+			}
+		}
+	}
+}
+```
