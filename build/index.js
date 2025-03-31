@@ -2,13 +2,11 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
-import * as dotenv from 'dotenv';
 import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import * as fs from 'fs';
-import os from 'os'; // Import the os module
 import axios from 'axios'; // Import axios at the top
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,31 +26,8 @@ const initialLogger = winston.createLogger({
 });
 // MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
 // MCP Hostからの環境変数を優先し、.envファイルはフォールバックとして扱う
-if (!process.env.SERPAPI_API_KEY) {
-    const envPaths = [
-        path.resolve(__dirname, '../.env'), // 開発環境
-        path.resolve(__dirname, '../../.env'), // ビルド後の環境
-        path.resolve(process.cwd(), '.env'), // カレントディレクトリの .env
-        path.resolve(process.cwd(), 'google-patents-server/.env'), // プロジェクトサブディレクトリの .env (後方互換性)
-        path.resolve(os.homedir(), '.google-patents-mcp.env') // ホームディレクトリの .google-patents-mcp.env
-    ];
-    for (const envPath of envPaths) {
-        if (fs.existsSync(envPath)) {
-            const result = dotenv.config({ path: envPath });
-            if (result.error) {
-                initialLogger.error(`Failed to load .env file from ${envPath}: ${result.error.message}`);
-            }
-            else {
-                initialLogger.info(`Successfully loaded .env file from ${envPath}`);
-                initialLogger.debug(`Loaded environment variables: LOG_LEVEL=${process.env.LOG_LEVEL}, SERPAPI_API_KEY=****`); // APIキーはログに出力しない
-                break;
-            }
-        }
-        else {
-            initialLogger.debug(`SERPAPI_API_KEY fallback search: environment file at ${envPath} does not exist [MCP Host settings: not found]`);
-        }
-    }
-}
+// .env ファイルの読み込みロジックを削除
+// SERPAPI_API_KEY は環境変数からのみ取得する
 // ログレベルの明示的な確認（デバッグ用）
 console.log(`Environment variable LOG_LEVEL: ${process.env.LOG_LEVEL}`);
 initialLogger.debug(`Current initial logger level: ${initialLogger.level}`);
