@@ -328,13 +328,18 @@ class GooglePatentsServer {
         try {
           // ★★★ tryブロック開始直後にも console.log を追加 ★★★
           console.log('[DEBUG] Entered API call try block');
-          // ★★★ 再度パラメータを単純化（curlで成功した q と api_key のみ）★★★
+          // パラメータを構築 (必須パラメータ)
           const searchParams = new URLSearchParams({
             engine: 'google_patents',
             q: q,
             api_key: SERPAPI_API_KEY
-            // ...otherParams // 他のオプションパラメータを除外して curl と完全に一致させる
           });
+          // オプションパラメータを安全に追加 (ただし、num は一時的に除外してテスト)
+          for (const [key, value] of Object.entries(otherParams)) {
+            if (key !== 'num' && value !== undefined) { // num を除外
+              searchParams.append(key, String(value)); // 値を文字列に変換
+            }
+          }
           const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
           logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
 
