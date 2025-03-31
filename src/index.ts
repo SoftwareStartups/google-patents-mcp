@@ -338,9 +338,14 @@ class GooglePatentsServer {
 
             if (!response.ok) {
               // Handle HTTP errors (like 4xx, 5xx)
-              const errorBody = await response.text(); // Try to get error body
-              logger.error(`SerpApi request failed with status ${response.status}: ${errorBody}`);
-              throw new McpError(response.status, `SerpApi request failed: ${response.statusText}`);
+              let errorBody = 'Could not retrieve error body.'; // Default error message
+              try {
+                errorBody = await response.text(); // Try to get error body
+              } catch (bodyError) {
+                logger.warn(`Failed to read error response body: ${bodyError instanceof Error ? bodyError.message : String(bodyError)}`);
+              }
+              logger.error(`SerpApi request failed with status ${response.status} ${response.statusText}. Response body: ${errorBody}`); // Log the actual error body
+              throw new McpError(response.status, `SerpApi request failed: ${response.statusText}. Body: ${errorBody}`); // Include body in error
             }
 
             const data = await response.json(); // Parse JSON response

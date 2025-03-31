@@ -287,16 +287,21 @@ class GooglePatentsServer {
                         }
                     }
                     const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    // ★★★ 再度デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
-                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
+                    // console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`); // デバッグ用console.log削除
                     logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
                     // Use node-fetch with AbortController for timeout (controller と timeoutId は上で定義済み)
                     const response = await fetch(apiUrl, { signal: controller.signal });
                     if (!response.ok) {
                         // Handle HTTP errors (like 4xx, 5xx)
-                        const errorBody = await response.text(); // Try to get error body
-                        logger.error(`SerpApi request failed with status ${response.status}: ${errorBody}`);
-                        throw new McpError(response.status, `SerpApi request failed: ${response.statusText}`);
+                        let errorBody = 'Could not retrieve error body.'; // Default error message
+                        try {
+                            errorBody = await response.text(); // Try to get error body
+                        }
+                        catch (bodyError) {
+                            logger.warn(`Failed to read error response body: ${bodyError instanceof Error ? bodyError.message : String(bodyError)}`);
+                        }
+                        logger.error(`SerpApi request failed with status ${response.status} ${response.statusText}. Response body: ${errorBody}`); // Log the actual error body
+                        throw new McpError(response.status, `SerpApi request failed: ${response.statusText}. Body: ${errorBody}`); // Include body in error
                     }
                     const data = await response.json(); // Parse JSON response
                     logger.info(`SerpApi request successful for query: "${q}"`);
