@@ -233,7 +233,7 @@ class GooglePatentsServer {
                             properties: {
                                 q: { type: 'string', description: 'Search query (required). Use semicolon (;) to separate multiple terms.' },
                                 page: { type: 'integer', description: 'Page number for pagination (default: 1).', default: 1 },
-                                num: { type: 'integer', description: 'Number of results per page (min: 10, max: 100, default: 10).', default: 10, minimum: 10, maximum: 100 },
+                                num: { type: 'integer', description: 'Number of results per page (default: 10). **IMPORTANT: Must be 10 or greater (up to 100).**', default: 10, minimum: 10, maximum: 100 },
                                 sort: { type: 'string', enum: ['relevance', 'new', 'old'], description: "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).", default: 'relevance' },
                                 before: { type: 'string', description: "Maximum date filter (e.g., 'publication:20231231', 'filing:20220101'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
                                 after: { type: 'string', description: "Minimum date filter (e.g., 'publication:20230101', 'filing:20220601'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
@@ -287,8 +287,7 @@ class GooglePatentsServer {
                         }
                     }
                     const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
-                    // ★★★ 再度デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
-                    console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
+                    // console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`); // デバッグ用console.log削除
                     logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
                     // Use node-fetch with AbortController for timeout (controller と timeoutId は上で定義済み)
                     const response = await fetch(apiUrl, { signal: controller.signal });

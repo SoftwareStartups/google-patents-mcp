@@ -92,7 +92,7 @@ Searches Google Patents via SerpApi.
     },
     "num": {
       "type": "integer",
-      "description": "Number of results per page (min: 10, max: 100, default: 10).",
+      "description": "Number of results per page (default: 10). **IMPORTANT: Must be 10 or greater (up to 100).**",
       "default": 10,
       "minimum": 10,
       "maximum": 100
