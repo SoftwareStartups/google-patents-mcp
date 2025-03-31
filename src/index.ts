@@ -269,7 +269,7 @@ class GooglePatentsServer {
             inputSchema: {
               type: 'object',
               properties: {
-                q: { type: 'string', description: 'Search query (required). Use semicolon (;) to separate multiple terms.' },
+                q: { type: 'string', description: "Search query (required). Although optional in SerpApi docs, a non-empty query is practically needed. Use semicolon (;) to separate multiple terms. Advanced syntax like '(Coffee) OR (Tea);(A47J)' is supported. See 'About Google Patents' for details." },
                 page: { type: 'integer', description: 'Page number for pagination (default: 1).', default: 1 },
                 num: { type: 'integer', description: 'Number of results per page (default: 10). **IMPORTANT: Must be 10 or greater (up to 100).**', default: 10, minimum: 10, maximum: 100 },
                 sort: { type: 'string', enum: ['relevance', 'new', 'old'], description: "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).", default: 'relevance' },

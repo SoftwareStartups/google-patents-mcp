@@ -83,7 +83,7 @@ Searches Google Patents via SerpApi.
   "properties": {
     "q": {
       "type": "string",
-      "description": "Search query (required). Use semicolon (;) to separate multiple terms."
+      "description": "Search query (required). Although optional in SerpApi docs, a non-empty query is practically needed. Use semicolon (;) to separate multiple terms. Advanced syntax like '(Coffee) OR (Tea);(A47J)' is supported. See 'About Google Patents' for details."
     },
     "page": {
       "type": "integer",
