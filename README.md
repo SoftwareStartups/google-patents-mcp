@@ -1,8 +1,7 @@
 # Google Patents MCP サーバー開発計画書
 
 ## 0. 参照リソース
-Google Patents API https://serpapi.com/google-patents-api
-claude-code-mcp https://github.com/KunihiroS/claude-code-mcp
+Google Patents API https://serpapi.com/google-patents-api  claude-code-mcp https://github.com/KunihiroS/claude-code-mcp
 
 ## 1. 開発目標
 
