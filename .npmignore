@@ -1,0 +1,16 @@
+# Source files
+src/
+
+# Config files
+tsconfig.json
+.env
+.env.*
+*.log
+
+# Node modules (should not be included)
+node_modules/
+
+# OS / Editor specific
+.DS_Store
+*.pem
+*.tgz
