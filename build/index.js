@@ -226,16 +226,23 @@ class GooglePatentsServer {
                 tools: [
                     {
                         name: 'search_patents',
-                        description: 'Searches Google Patents using SerpApi.',
+                        description: 'Searches Google Patents using SerpApi. Allows filtering by date, inventor, assignee, country, language, status, type, and sorting.',
                         inputSchema: {
                             type: 'object',
                             properties: {
-                                q: { type: 'string', description: 'Search query (required)' },
-                                // ここにSerpApiの他のパラメータを追加可能 (例: num, start, etc.)
-                                // https://serpapi.com/google-patents-api を参照
-                                num: { type: 'integer', description: 'Number of results to return (e.g., 10, 20, 30...). Default is 10.' },
-                                start: { type: 'integer', description: 'Result offset for pagination. Default is 0.' },
-                                // 他のパラメータも必要に応じて追加...
+                                q: { type: 'string', description: 'Search query (required). Use semicolon (;) to separate multiple terms.' },
+                                page: { type: 'integer', description: 'Page number for pagination (default: 1).', default: 1 },
+                                num: { type: 'integer', description: 'Number of results per page (min: 10, max: 100, default: 10).', default: 10, minimum: 10, maximum: 100 },
+                                sort: { type: 'string', enum: ['relevance', 'new', 'old'], description: "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).", default: 'relevance' },
+                                before: { type: 'string', description: "Maximum date filter (e.g., 'publication:20231231', 'filing:20220101'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
+                                after: { type: 'string', description: "Minimum date filter (e.g., 'publication:20230101', 'filing:20220601'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'." },
+                                inventor: { type: 'string', description: 'Filter by inventor names. Separate multiple names with a comma (,).' },
+                                assignee: { type: 'string', description: 'Filter by assignee names. Separate multiple names with a comma (,).' },
+                                country: { type: 'string', description: "Filter by country codes (e.g., 'US', 'WO,JP'). Separate multiple codes with a comma (,)." },
+                                language: { type: 'string', description: "Filter by language (e.g., 'ENGLISH', 'JAPANESE,GERMAN'). Separate multiple languages with a comma (,). Supported: ENGLISH, GERMAN, CHINESE, FRENCH, SPANISH, ARABIC, JAPANESE, KOREAN, PORTUGUESE, RUSSIAN, ITALIAN, DUTCH, SWEDISH, FINNISH, NORWEGIAN, DANISH." },
+                                status: { type: 'string', enum: ['GRANT', 'APPLICATION'], description: "Filter by patent status: 'GRANT' or 'APPLICATION'." },
+                                type: { type: 'string', enum: ['PATENT', 'DESIGN'], description: "Filter by patent type: 'PATENT' or 'DESIGN'." },
+                                scholar: { type: 'boolean', description: 'Include Google Scholar results (default: false).', default: false }
                             },
                             required: ['q']
                         }
