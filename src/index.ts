@@ -334,9 +334,9 @@ class GooglePatentsServer {
             q: q,
             api_key: SERPAPI_API_KEY
           });
-          // オプションパラメータを安全に追加 (ただし、num は一時的に除外してテスト)
+          // オプションパラメータを安全に追加
           for (const [key, value] of Object.entries(otherParams)) {
-            if (key !== 'num' && value !== undefined) { // num を除外
+            if (value !== undefined) {
               searchParams.append(key, String(value)); // 値を文字列に変換
             }
           }
