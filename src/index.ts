@@ -328,12 +328,12 @@ class GooglePatentsServer {
         try {
           // ★★★ tryブロック開始直後にも console.log を追加 ★★★
           console.log('[DEBUG] Entered API call try block');
-          // ★★★ パラメータを単純化（q と api_key のみ） ★★★
+          // パラメータを元に戻す
           const searchParams = new URLSearchParams({
             engine: 'google_patents',
             q: q,
-            api_key: SERPAPI_API_KEY
-            // ...otherParams // 他のオプションパラメータを一時的に除外
+            api_key: SERPAPI_API_KEY,
+            ...otherParams // 他のオプションパラメータを追加
           });
           const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
           logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
@@ -342,8 +342,8 @@ class GooglePatentsServer {
           const response = await axios.get(apiUrl, { timeout: 30000 }); // タイムアウトを30秒に設定
           logger.info(`SerpApi request successful for query: "${q}"`);
           logger.debug(`SerpApi response status: ${response.status}`);
-          // レスポンス全体を返す（必要に応じて整形）
-          return { content: [{ type: 'json', json: response.data }] };
+          // レスポンスを type: 'text' の JSON 文字列として返す
+          return { content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }] };
 
         } catch (error: any) {
           logger.error(`Error calling SerpApi for query "${q}": ${error.message}`);
