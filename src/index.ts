@@ -326,6 +326,8 @@ class GooglePatentsServer {
             }
           }
           const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+          // ★★★ デバッグ用に実際のURLをコンソールに出力（APIキー含むので注意） ★★★
+          console.log(`[DEBUG] Calling SerpApi URL: ${apiUrl}`);
           logger.info(`Calling SerpApi: ${apiUrl.replace(SERPAPI_API_KEY, '****')}`); // ログにはAPIキーを隠す
 
           // axios は既にトップレベルでインポートされている
