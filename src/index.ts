@@ -311,8 +311,7 @@ class GooglePatentsServer {
         }
 
         try {
-          // ★★★ tryブロック開始直後にも console.log を追加 ★★★
-          console.log('[DEBUG] Entered API call try block');
+          console.log('[DEBUG] Entered API call try block'); // tryブロック開始
           // パラメータを構築 (必須パラメータ)
           const searchParams = new URLSearchParams({
             engine: 'google_patents',
@@ -355,11 +354,17 @@ class GooglePatentsServer {
     });
   }
 
-  async run() { // async は axios の await のために必要
+  async run() {
+    // ★★★ run() メソッド開始直後 ★★★
+    console.log('[DEBUG] Server run() method started');
     logger.debug('Starting Google Patents MCP server');
     const transport = new StdioServerTransport();
     logger.debug('Created StdioServerTransport');
+    // ★★★ connect() 呼び出し直前 ★★★
+    console.log('[DEBUG] Calling server.connect(transport)');
     await this.server.connect(transport);
+    // ★★★ connect() 呼び出し直後 ★★★
+    console.log('[DEBUG] server.connect(transport) completed');
     logger.info("Google Patents MCP server running on stdio");
     logger.debug('Server connected to transport and ready to process requests');
   }
