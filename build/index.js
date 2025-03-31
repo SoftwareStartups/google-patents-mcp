@@ -268,11 +268,14 @@ class GooglePatentsServer {
                 ]
             };
         });
-        // ツール実行リクエスト処理
-        logger.debug('Registering CallTool request handler');
         // ツール実行リクエスト処理 - ここで search_patents を実装する
         logger.debug('Registering CallTool request handler');
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+            // ★★★ ハンドラの本当に一番最初に console.log を追加 ★★★
+            console.log('<<<< RAW CallToolRequest RECEIVED (console.log) >>>>');
+            // ハンドラが呼び出されたことを最初にログ出力 (winston)
+            logger.debug('<<<< CallToolRequestSchema handler invoked (winston) >>>>');
+            logger.debug(`Received request object: ${JSON.stringify(request, null, 2)}`); // リクエスト全体もログ出力
             const { name, arguments: args } = request.params;
             logger.debug(`CallTool handler called for tool: ${name} with args: ${JSON.stringify(args, null, 2)}`);
             if (name === 'search_patents') {
