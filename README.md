@@ -56,13 +56,14 @@ The server requires your SerpApi API key. You can provide it in one of the follo
     ```
 
 2.  **.env File:**
-    Create a `.env` file in the directory where you run the `npx` command, or in your home directory (`~/.google-patents-mcp.env`), with the following content:
+    Create a `.env` file in the directory where you run the `npx` command (for local testing or if not using an MCP Host), or in your home directory (`~/.google-patents-mcp.env`), with the following content:
 
     ```dotenv
     SERPAPI_API_KEY=YOUR_ACTUAL_SERPAPI_KEY
     # Optional: Set log level (e.g., debug, info, warn, error)
     # LOG_LEVEL=debug
     ```
+    **Note:** While using a `.env` file is convenient for local testing, for production or integration with MCP Hosts, setting the environment variable directly via the host configuration is the recommended and more secure approach. The primary intended use case is execution via `npx`, where environment variables are typically managed by the calling process or MCP Host.
 
 The server searches for `.env` files in the following order:
     *   `./.env` (relative to where `npx` is run)
