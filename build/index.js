@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ListPromptsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +11,15 @@ import * as fs from 'fs';
 import fetch from 'node-fetch'; // Import node-fetch
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★ デバッグ用ログを追加 ★
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★
+console.log(`--- MCP Server Startup ---`);
+console.log(`[DEBUG] Node version: ${process.version}`);
+console.log(`[DEBUG] Script path: ${__filename}`);
+console.log(`[DEBUG] SERPAPI_API_KEY check: ${process.env.SERPAPI_API_KEY ? 'Exists (set)' : 'MISSING!'}`);
+console.log(`-------------------------`);
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★
 // ロガーのフォーマット設定を共通化
 const createLoggerFormat = () => {
     return winston.format.combine(winston.format.timestamp(), winston.format.printf(({ timestamp, level, message }) => {
@@ -198,15 +207,19 @@ class GooglePatentsServer {
         logger.debug('Initializing Google Patents Server');
         this.server = new Server({
             name: 'google-patents-server',
-            version: '0.1.0',
+            version: '0.2.0',
         }, {
             capabilities: {
                 resources: {},
                 tools: {},
+                prompts: {}, // Declare prompts capability
             },
         });
         logger.debug('Setting up tool handlers');
         this.setupToolHandlers();
+        // Register handlers for standard MCP list methods required by some clients
+        this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
+        this.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
         this.server.onerror = (error) => {
             logger.error('[MCP Error]', error);
             logger.debug(`MCP server error details: ${error instanceof Error ? error.stack : JSON.stringify(error)}`);
