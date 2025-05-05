@@ -2,9 +2,18 @@
 
 # Google Patents MCP Server (`google-patents-mcp`)
 
+[![smithery badge](https://smithery.ai/badge/@KunihiroS/google-patents-mcp)](https://smithery.ai/server/@KunihiroS/google-patents-mcp)
 [![npm version](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp.svg)](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp)
 
 This project provides a Model Context Protocol (MCP) server that allows searching Google Patents information via the [SerpApi Google Patents API](https://serpapi.com/google-patents-api).
+
+### Installing via Smithery
+
+To install Google Patents MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@KunihiroS/google-patents-mcp):
+
+```bash
+npx -y @smithery/cli install @KunihiroS/google-patents-mcp --client claude
+```
 
 ## Changelog
 
