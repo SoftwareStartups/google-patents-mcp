@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/kunihiros-google-patents-mcp-badge.png)](https://mseep.ai/app/kunihiros-google-patents-mcp)
+
 # Google Patents MCP Server (`google-patents-mcp`)
 
 [![npm version](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp.svg)](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp)
