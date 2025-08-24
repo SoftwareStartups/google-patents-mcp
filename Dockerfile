@@ -22,6 +22,10 @@ RUN npm install --only=production
 # Copy built artifacts
 COPY --from=builder /app/build ./build
 
+# Ensure non-root ownership of app files
+RUN chown -R node:node /app
+
 # Expose stdio for MCP communication
 # Start the MCP server
+USER node
 CMD ["node", "build/index.js"]
