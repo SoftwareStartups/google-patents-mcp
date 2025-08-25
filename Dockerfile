@@ -11,6 +11,10 @@ RUN npm install
 COPY src ./src
 RUN npm run build
 
+# Ensure non-root ownership and set non-root user for builder stage
+RUN chown -R node:node /app
+USER node
+
 # Stage 2: Create production image
 FROM node:lts-alpine
 WORKDIR /app
