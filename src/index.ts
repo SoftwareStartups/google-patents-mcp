@@ -16,6 +16,11 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import * as fs from 'fs';
 import fetch from 'node-fetch';
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+) as { version: string };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -120,7 +125,7 @@ class GooglePatentsServer {
     this.server = new Server(
       {
         name: 'google-patents-server',
-        version: '0.3.0',
+        version: packageJson.version,
       },
       {
         capabilities: {
