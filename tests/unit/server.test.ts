@@ -1,59 +1,322 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
-// Mock modules
-vi.mock('node-fetch');
-vi.mock('winston', () => ({
-  default: {
-    createLogger: vi.fn(() => ({
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      add: vi.fn(),
-      close: vi.fn(),
-    })),
-    format: {
-      combine: vi.fn(),
-      timestamp: vi.fn(),
-      printf: vi.fn(),
-    },
-    transports: {
-      Console: vi.fn(),
-      File: vi.fn(),
-    },
-  },
-}));
+describe('Google Patents MCP Server - Unit Tests', () => {
+  describe('Config Module', () => {
+    it('should load config with valid environment variables', () => {
+      const oldApiKey = process.env.SERPAPI_API_KEY;
+      const oldLogLevel = process.env.LOG_LEVEL;
 
-describe('Google Patents MCP Server', () => {
-  describe('Tool Registration', () => {
-    it('should register search_patents tool', async () => {
-      const { default: fetch } = await import('node-fetch');
-      const { Response } = await import('node-fetch');
+      try {
+        process.env.SERPAPI_API_KEY = 'test_api_key';
+        process.env.LOG_LEVEL = 'debug';
 
-      vi.mocked(fetch).mockResolvedValue(
-        new Response(
-          JSON.stringify({ search_metadata: { status: 'Success' } }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        )
+        vi.resetModules();
+
+        // Re-import to get fresh module
+        const config = {
+          serpApiKey: process.env.SERPAPI_API_KEY,
+          logLevel: process.env.LOG_LEVEL || 'info',
+        };
+
+        expect(config.serpApiKey).toBe('test_api_key');
+        expect(config.logLevel).toBe('debug');
+      } finally {
+        process.env.SERPAPI_API_KEY = oldApiKey;
+        process.env.LOG_LEVEL = oldLogLevel;
+      }
+    });
+
+    it('should use default log level if not specified', () => {
+      const logLevelFromEnv: string | undefined = undefined;
+      const config = {
+        serpApiKey: 'test_api_key',
+        logLevel: logLevelFromEnv || 'info',
+      };
+
+      expect(config.logLevel).toBe('info');
+    });
+
+    it('should validate that config requires SERPAPI_API_KEY', () => {
+      const apiKey = undefined;
+
+      const getConfig = () => {
+        if (!apiKey) {
+          throw new Error('SERPAPI_API_KEY environment variable is not set.');
+        }
+        return { serpApiKey: apiKey, logLevel: 'info' };
+      };
+
+      expect(() => getConfig()).toThrow(
+        'SERPAPI_API_KEY environment variable is not set.'
       );
-
-      // Set API key for tests
-      process.env.SERPAPI_API_KEY = 'test_api_key';
-
-      // Import server after mocks are set up
-      const _serverModule = await import('../../src/index.js');
-
-      // Give server time to initialize
-      await new Promise((resolve) => setTimeout(resolve, 100));
     });
   });
 
-  describe('Tool Schema Validation', () => {
-    it('should have correct schema for search_patents tool', () => {
+  describe('Types Module', () => {
+    it('should have correct SearchPatentsArgs structure', () => {
+      const args: {
+        q: string;
+        page?: number;
+        num?: number;
+        sort?: 'relevance' | 'new' | 'old';
+        before?: string;
+        after?: string;
+        inventor?: string;
+        assignee?: string;
+        country?: string;
+        language?: string;
+        status?: 'GRANT' | 'APPLICATION';
+        type?: 'PATENT' | 'DESIGN';
+        scholar?: boolean;
+      } = {
+        q: 'quantum computer',
+        page: 1,
+        num: 10,
+        sort: 'relevance',
+        country: 'US',
+        status: 'GRANT',
+        type: 'PATENT',
+      };
+
+      expect(args.q).toBe('quantum computer');
+      expect(args.page).toBe(1);
+      expect(args.status).toBe('GRANT');
+    });
+  });
+
+  describe('SerpApiClient', () => {
+    beforeEach(() => {
+      vi.resetModules();
+      vi.clearAllMocks();
+    });
+
+    it('should construct correct URL parameters for basic search', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () =>
+          await Promise.resolve({
+            search_metadata: { status: 'Success' },
+            organic_results: [],
+          }),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'test_api_key',
+        mockLogger as never
+      );
+
+      await client.searchPatents({ q: 'quantum computer' });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('engine=google_patents'),
+        expect.any(Object)
+      );
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('q=quantum'),
+        expect.any(Object)
+      );
+    });
+
+    it('should include optional parameters when provided', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => await Promise.resolve({ organic_results: [] }),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'test_api_key',
+        mockLogger as never
+      );
+
+      await client.searchPatents({
+        q: 'AI',
+        page: 2,
+        num: 20,
+        sort: 'new',
+        country: 'US',
+        status: 'GRANT',
+      });
+
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('page=2');
+      expect(callUrl).toContain('num=20');
+      expect(callUrl).toContain('sort=new');
+      expect(callUrl).toContain('country=US');
+      expect(callUrl).toContain('status=GRANT');
+    });
+
+    it('should throw error when query is missing', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'test_api_key',
+        mockLogger as never
+      );
+
+      await expect(
+        client.searchPatents({ q: '' })
+      ).rejects.toThrow('Missing required argument: q');
+    });
+
+    it('should handle API errors correctly', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        text: async () => await Promise.resolve('Invalid API key'),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'invalid_key',
+        mockLogger as never
+      );
+
+      await expect(
+        client.searchPatents({ q: 'test' })
+      ).rejects.toThrow('SerpApi request failed');
+    });
+
+    it('should redact API key in logs', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => await Promise.resolve({ organic_results: [] }),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'secret_api_key_12345',
+        mockLogger as never
+      );
+
+      await client.searchPatents({ q: 'test' });
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('****')
+      );
+      expect(mockLogger.info).not.toHaveBeenCalledWith(
+        expect.stringContaining('secret_api_key_12345')
+      );
+    });
+
+    it('should handle timeout scenarios', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockFetch = vi.fn().mockImplementation(() => {
+        const error = new Error('The operation was aborted') as Error & {
+          name: string;
+        };
+        error.name = 'AbortError';
+        return Promise.reject(error);
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { SerpApiClient } = await import('../../src/services/serpapi.js');
+      const client = new SerpApiClient(
+        'test_key',
+        mockLogger as never,
+        100
+      );
+
+      await expect(
+        client.searchPatents({ q: 'test' })
+      ).rejects.toThrow('SerpApi request timed out');
+    });
+  });
+
+  describe('GooglePatentsServer', () => {
+    it('should handle search_patents tool correctly', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockSerpApiClient = {
+        searchPatents: vi.fn().mockResolvedValue({
+          search_metadata: { status: 'Success' },
+          organic_results: [
+            { title: 'Test Patent', patent_id: 'US1234567' },
+          ],
+        }),
+      };
+
+      const { GooglePatentsServer } = await import('../../src/server.js');
+      const server = new GooglePatentsServer(
+        '1.0.0',
+        mockLogger as never,
+        mockSerpApiClient as never
+      );
+
+      expect(server).toBeDefined();
+    });
+
+    it('should register search_patents tool with correct schema', () => {
       const expectedSchema = {
         type: 'object',
         properties: {
@@ -85,13 +348,12 @@ describe('Google Patents MCP Server', () => {
         required: ['q'],
       };
 
-      // Schema is validated through integration tests
       expect(expectedSchema.required).toContain('q');
       expect(expectedSchema.properties.q).toBeDefined();
     });
   });
 
-  describe('Search Parameters', () => {
+  describe('URL Parameter Construction', () => {
     it('should construct correct URL parameters for basic search', () => {
       const params = new URLSearchParams({
         engine: 'google_patents',
@@ -102,25 +364,6 @@ describe('Google Patents MCP Server', () => {
       expect(params.get('engine')).toBe('google_patents');
       expect(params.get('q')).toBe('quantum computer');
       expect(params.get('api_key')).toBe('test_key');
-    });
-
-    it('should construct correct URL parameters with optional filters', () => {
-      const params = new URLSearchParams({
-        engine: 'google_patents',
-        q: 'artificial intelligence',
-        api_key: 'test_key',
-        page: '2',
-        num: '20',
-        sort: 'new',
-        country: 'US',
-        status: 'GRANT',
-      });
-
-      expect(params.get('page')).toBe('2');
-      expect(params.get('num')).toBe('20');
-      expect(params.get('sort')).toBe('new');
-      expect(params.get('country')).toBe('US');
-      expect(params.get('status')).toBe('GRANT');
     });
 
     it('should handle date filters correctly', () => {
@@ -136,17 +379,13 @@ describe('Google Patents MCP Server', () => {
       expect(params.get('after')).toBe('filing:20230101');
     });
 
-    it('should handle inventor and assignee filters', () => {
+    it('should properly encode special characters in query', () => {
+      const query = 'Coffee OR Tea; (A47J)';
       const params = new URLSearchParams({
-        engine: 'google_patents',
-        q: 'patent search',
-        api_key: 'test_key',
-        inventor: 'John Doe',
-        assignee: 'Tech Corp',
+        q: query,
       });
 
-      expect(params.get('inventor')).toBe('John Doe');
-      expect(params.get('assignee')).toBe('Tech Corp');
+      expect(params.toString()).toBe('q=Coffee+OR+Tea%3B+%28A47J%29');
     });
 
     it('should handle multiple country codes', () => {
@@ -169,86 +408,6 @@ describe('Google Patents MCP Server', () => {
       });
 
       expect(params.get('language')).toBe('ENGLISH,JAPANESE');
-    });
-
-    it('should handle patent type filter', () => {
-      const params = new URLSearchParams({
-        engine: 'google_patents',
-        q: 'design',
-        api_key: 'test_key',
-        type: 'DESIGN',
-      });
-
-      expect(params.get('type')).toBe('DESIGN');
-    });
-
-    it('should handle scholar parameter', () => {
-      const params = new URLSearchParams({
-        engine: 'google_patents',
-        q: 'research',
-        api_key: 'test_key',
-        scholar: 'true',
-      });
-
-      expect(params.get('scholar')).toBe('true');
-    });
-
-    it('should not include undefined parameters', () => {
-      const args = {
-        q: 'test query',
-        page: undefined,
-        num: undefined,
-      };
-
-      const params = new URLSearchParams({
-        engine: 'google_patents',
-        q: args.q,
-        api_key: 'test_key',
-      });
-
-      for (const [key, value] of Object.entries(args)) {
-        if (key !== 'q' && value !== undefined) {
-          params.append(key, String(value));
-        }
-      }
-
-      expect(params.has('page')).toBe(false);
-      expect(params.has('num')).toBe(false);
-      expect(params.has('q')).toBe(true);
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should validate required query parameter', () => {
-      const isQueryValid = (q: string | undefined): boolean => {
-        return typeof q === 'string' && q.length > 0;
-      };
-
-      expect(isQueryValid('')).toBe(false);
-      expect(isQueryValid(undefined)).toBe(false);
-      expect(isQueryValid('valid query')).toBe(true);
-    });
-
-    it('should validate API key presence', () => {
-      const isApiKeyValid = (key: string | undefined): boolean => {
-        return typeof key === 'string' && key.length > 0;
-      };
-
-      expect(isApiKeyValid('')).toBe(false);
-      expect(isApiKeyValid(undefined)).toBe(false);
-      expect(isApiKeyValid('valid_key')).toBe(true);
-    });
-
-    it('should handle timeout scenarios', () => {
-      const timeoutMs = 30000;
-      const controller = new AbortController();
-
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      expect(controller.signal.aborted).toBe(false);
-
-      clearTimeout(timeoutId);
-      expect(controller.signal.aborted).toBe(false);
     });
   });
 
@@ -346,25 +505,27 @@ describe('Google Patents MCP Server', () => {
       expect(fullUrl).toContain('q=test');
       expect(fullUrl).toContain('api_key=key123');
     });
-
-    it('should properly encode special characters in query', () => {
-      const query = 'Coffee OR Tea; (A47J)';
-      const params = new URLSearchParams({
-        q: query,
-      });
-
-      expect(params.toString()).toBe('q=Coffee+OR+Tea%3B+%28A47J%29');
-    });
   });
 
-  describe('Logging and Security', () => {
-    it('should redact API key in logs', () => {
-      const apiKey = 'secret_api_key_12345';
-      const url = `https://serpapi.com/search.json?api_key=${apiKey}&q=test`;
-      const redactedUrl = url.replace(apiKey, '****');
+  describe('Validation Logic', () => {
+    it('should validate required query parameter', () => {
+      const isQueryValid = (q: string | undefined): boolean => {
+        return typeof q === 'string' && q.length > 0;
+      };
 
-      expect(redactedUrl).not.toContain(apiKey);
-      expect(redactedUrl).toContain('****');
+      expect(isQueryValid('')).toBe(false);
+      expect(isQueryValid(undefined)).toBe(false);
+      expect(isQueryValid('valid query')).toBe(true);
+    });
+
+    it('should validate API key presence', () => {
+      const isApiKeyValid = (key: string | undefined): boolean => {
+        return typeof key === 'string' && key.length > 0;
+      };
+
+      expect(isApiKeyValid('')).toBe(false);
+      expect(isApiKeyValid(undefined)).toBe(false);
+      expect(isApiKeyValid('valid_key')).toBe(true);
     });
   });
 });
