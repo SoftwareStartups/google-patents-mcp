@@ -114,10 +114,7 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       }));
 
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
-      const client = new SerpApiClient(
-        'test_api_key',
-        mockLogger as never
-      );
+      const client = new SerpApiClient('test_api_key', mockLogger as never);
 
       await client.searchPatents({ q: 'quantum computer' });
 
@@ -150,10 +147,7 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       }));
 
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
-      const client = new SerpApiClient(
-        'test_api_key',
-        mockLogger as never
-      );
+      const client = new SerpApiClient('test_api_key', mockLogger as never);
 
       await client.searchPatents({
         q: 'AI',
@@ -181,14 +175,11 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       };
 
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
-      const client = new SerpApiClient(
-        'test_api_key',
-        mockLogger as never
-      );
+      const client = new SerpApiClient('test_api_key', mockLogger as never);
 
-      await expect(
-        client.searchPatents({ q: '' })
-      ).rejects.toThrow('Missing required argument: q');
+      await expect(client.searchPatents({ q: '' })).rejects.toThrow(
+        'Missing required argument: q'
+      );
     });
 
     it('should handle API errors correctly', async () => {
@@ -211,14 +202,11 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       }));
 
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
-      const client = new SerpApiClient(
-        'invalid_key',
-        mockLogger as never
-      );
+      const client = new SerpApiClient('invalid_key', mockLogger as never);
 
-      await expect(
-        client.searchPatents({ q: 'test' })
-      ).rejects.toThrow('SerpApi request failed');
+      await expect(client.searchPatents({ q: 'test' })).rejects.toThrow(
+        'SerpApi request failed'
+      );
     });
 
     it('should redact API key in logs', async () => {
@@ -276,15 +264,11 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       }));
 
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
-      const client = new SerpApiClient(
-        'test_key',
-        mockLogger as never,
-        100
-      );
+      const client = new SerpApiClient('test_key', mockLogger as never, 100);
 
-      await expect(
-        client.searchPatents({ q: 'test' })
-      ).rejects.toThrow('SerpApi request timed out');
+      await expect(client.searchPatents({ q: 'test' })).rejects.toThrow(
+        'SerpApi request timed out'
+      );
     });
   });
 
@@ -300,9 +284,7 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       const mockSerpApiClient = {
         searchPatents: vi.fn().mockResolvedValue({
           search_metadata: { status: 'Success' },
-          organic_results: [
-            { title: 'Test Patent', patent_id: 'US1234567' },
-          ],
+          organic_results: [{ title: 'Test Patent', patent_id: 'US1234567' }],
         }),
       };
 

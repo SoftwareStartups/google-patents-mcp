@@ -149,7 +149,9 @@ export class GooglePatentsServer {
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       this.logger.debug('CallToolRequestSchema handler invoked');
-      this.logger.debug(`Received request: ${JSON.stringify(request, null, 2)}`);
+      this.logger.debug(
+        `Received request: ${JSON.stringify(request, null, 2)}`
+      );
 
       const { name, arguments: args } = request.params;
       this.logger.debug(
@@ -209,11 +211,12 @@ export class GooglePatentsServer {
     this.logger.debug('Created StdioServerTransport');
     await this.server.connect(transport);
     this.logger.info('Google Patents MCP server running on stdio');
-    this.logger.debug('Server connected to transport and ready to process requests');
+    this.logger.debug(
+      'Server connected to transport and ready to process requests'
+    );
   }
 
   async close(): Promise<void> {
     await this.server.close();
   }
 }
-

@@ -17,4 +17,3 @@ export interface SearchPatentsArgs {
 export interface SerpApiResponse {
   [key: string]: unknown;
 }
-

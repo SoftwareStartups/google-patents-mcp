@@ -66,4 +66,3 @@ export const createLogger = (logLevel: string): winston.Logger => {
 
   return logger;
 };
-
