@@ -16,9 +16,7 @@ export class SerpApiClient {
   async searchPatents(args: SearchPatentsArgs): Promise<SerpApiResponse> {
     const { q, ...otherParams } = args;
 
-    if (!q) {
-      throw new Error('Missing required argument: q');
-    }
+    const query = q || '';
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -26,7 +24,7 @@ export class SerpApiClient {
     try {
       const searchParams = new URLSearchParams({
         engine: 'google_patents',
-        q: q,
+        q: query,
         api_key: this.apiKey,
       });
 
@@ -54,7 +52,7 @@ export class SerpApiClient {
       }
 
       const data = (await response.json()) as SerpApiResponse;
-      this.logger.info(`SerpApi request successful for query: "${q}"`);
+      this.logger.info(`SerpApi request successful for query: "${query}"`);
       this.logger.debug(`SerpApi response status: ${response.status}`);
 
       clearTimeout(timeoutId);
@@ -64,7 +62,7 @@ export class SerpApiClient {
 
       if (error instanceof Error && error.name === 'AbortError') {
         this.logger.error(
-          `SerpApi request timed out after ${this.timeoutMs}ms for query "${q}"`
+          `SerpApi request timed out after ${this.timeoutMs}ms for query "${query}"`
         );
         throw new Error('SerpApi request timed out');
       }
@@ -72,7 +70,7 @@ export class SerpApiClient {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Error during fetch or JSON parsing for query "${q}": ${errorMessage}`
+        `Error during fetch or JSON parsing for query "${query}": ${errorMessage}`
       );
       if (error instanceof Error && error.stack) {
         this.logger.error(`Stack trace: ${error.stack}`);

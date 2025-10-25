@@ -70,7 +70,7 @@ export class GooglePatentsServer {
                 q: {
                   type: 'string',
                   description:
-                    "Search query (required). Although optional in SerpApi docs, a non-empty query is practically needed. Use semicolon (;) to separate multiple terms. Advanced syntax like '(Coffee) OR (Tea);(A47J)' is supported. See 'About Google Patents' for details.",
+                    "Search query (optional). Use semicolon (;) to separate multiple terms. Advanced syntax like '(Coffee) OR (Tea);(A47J)' is supported. If not provided, will search using other filters (assignee, inventor, etc.). See 'About Google Patents' for details.",
                 },
                 page: {
                   type: 'integer',
@@ -140,7 +140,7 @@ export class GooglePatentsServer {
                   default: false,
                 },
               },
-              required: ['q'],
+              required: [],
             },
           },
         ],

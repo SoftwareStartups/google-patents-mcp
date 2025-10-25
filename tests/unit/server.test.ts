@@ -166,7 +166,7 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       expect(callUrl).toContain('status=GRANT');
     });
 
-    it('should throw error when query is missing', async () => {
+    it('should allow empty query when using filters (assignee only)', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -174,12 +174,43 @@ describe('Google Patents MCP Server - Unit Tests', () => {
         debug: vi.fn(),
       };
 
+      const mockResponse = {
+        organic_results: [
+          {
+            patent_id: 'patent/FI127693B/en',
+            title: 'Test Patent',
+            assignee: 'Skyfora Oy',
+          },
+        ],
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => await Promise.resolve(mockResponse),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
       const { SerpApiClient } = await import('../../src/services/serpapi.js');
       const client = new SerpApiClient('test_api_key', mockLogger as never);
 
-      await expect(client.searchPatents({ q: '' })).rejects.toThrow(
-        'Missing required argument: q'
-      );
+      const result = await client.searchPatents({
+        assignee: 'Skyfora',
+        num: 10,
+      });
+
+      // Verify the result is returned correctly
+      expect(result).toEqual(mockResponse);
+
+      // Verify the API was called with correct parameters
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('engine=google_patents');
+      expect(callUrl).toContain('q='); // Empty query is allowed
+      expect(callUrl).toContain('assignee=Skyfora');
+      expect(callUrl).toContain('num=10');
     });
 
     it('should handle API errors correctly', async () => {
@@ -327,11 +358,63 @@ describe('Google Patents MCP Server - Unit Tests', () => {
             enum: ['PATENT', 'DESIGN'],
           }) as { type: string; enum: string[] },
         },
-        required: ['q'],
+        required: [],
       };
 
-      expect(expectedSchema.required).toContain('q');
+      // q is now optional, not required
+      expect(expectedSchema.required).toEqual([]);
       expect(expectedSchema.properties.q).toBeDefined();
+    });
+
+    it('should handle search_patents with assignee filter only (no query)', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockResponse = {
+        search_metadata: { status: 'Success' },
+        organic_results: [
+          {
+            title: 'Test Patent',
+            patent_id: 'FI127693B',
+            assignee: 'Skyfora Oy',
+          },
+        ],
+      };
+
+      const mockSerpApiClient = {
+        searchPatents: vi.fn().mockResolvedValue(mockResponse),
+      };
+
+      const { GooglePatentsServer } = await import('../../src/server.js');
+      const serverInstance = new GooglePatentsServer(
+        '1.0.0',
+        mockLogger as never,
+        mockSerpApiClient as never
+      );
+
+      // Access the private method through type assertion
+      const result = await (
+        serverInstance as unknown as {
+          handleSearchPatents: (
+            args: Record<string, unknown>
+          ) => Promise<{ content: Array<{ type: string; text: string }> }>;
+        }
+      ).handleSearchPatents({ assignee: 'Skyfora', num: 10 });
+
+      // Verify the client was called with assignee only (no query)
+      expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith({
+        assignee: 'Skyfora',
+        num: 10,
+      });
+
+      // Verify the result is formatted correctly
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].type).toBe('text');
+      expect(JSON.parse(result.content[0].text)).toEqual(mockResponse);
     });
   });
 
@@ -390,6 +473,21 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       });
 
       expect(params.get('language')).toBe('ENGLISH,JAPANESE');
+    });
+
+    it('should allow empty query with assignee filter', () => {
+      const params = new URLSearchParams({
+        engine: 'google_patents',
+        q: '',
+        api_key: 'test_key',
+        assignee: 'Skyfora',
+        num: '10',
+      });
+
+      expect(params.get('q')).toBe('');
+      expect(params.get('assignee')).toBe('Skyfora');
+      expect(params.get('num')).toBe('10');
+      expect(params.toString()).toContain('assignee=Skyfora');
     });
   });
 

@@ -1,5 +1,5 @@
 export interface SearchPatentsArgs {
-  q: string;
+  q?: string;
   page?: number;
   num?: number;
   sort?: 'relevance' | 'new' | 'old';
