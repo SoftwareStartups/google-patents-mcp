@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+
+# MCP Server Best Practices
+
+Standards specific to Model Context Protocol server implementation.
+
+- Follow the official Model Context Protocol specification
+- Implement proper error handling and validation for all tool inputs
+- Use clear, descriptive tool names and parameter definitions
+- Provide comprehensive tool descriptions for AI consumption

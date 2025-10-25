@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+
+# Coding Standards
+
+Technical standards and practices for code quality.
+
+## TypeScript Best Practices
+
+- Use latest stable Node.js and TypeScript syntax
+- Ensure all code is correctly typed (no `any` types unless absolutely necessary)
+- Prefer functional style over classes
+- Follow clean code principles: DRY, SOLID, meaningful names, small functions
+- Use modern JavaScript/TypeScript features (async/await, destructuring, optional chaining, nullish coalescing)
+- Prefer pure functions and immutability
+- Avoid side effects where possible
+- Use composition over inheritance
+- Keep functions small and focused on single responsibility
+
+## Testing Requirements
+
+- Write unit tests for major features
+- Maintain test coverage for critical functionality
+- Tests should be clear, focused, and maintainable
+- **Add a unit test for every relevant bug fix** to prevent regression
+
+## Build Verification
+
+- After each major code change (not markdown documents), run:
+  - `make check` - to verify code quality and types
+  - `make test` - to ensure all tests pass

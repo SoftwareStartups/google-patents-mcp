@@ -140,6 +140,3 @@ dist
 
 # Auto Committer environment file
 .auto-committer/.env
-
-# Cursor IDE
-.cursor/

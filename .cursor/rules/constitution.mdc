@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+
+# Project Constitution
+
+Core principles guiding this project's development.
+
+## Development Philosophy
+
+### Forward-Looking Approach
+
+- **Never implement backward compatibility**
+- Always implement according to the latest insight and best practices
+- Refactor boldly when better approaches are identified
+- Embrace breaking changes when they lead to better design
+
+### Communication Style
+
+- **Do not output verbose summaries of work done or changes implemented**
+- Be concise and direct in responses
+- Focus on what matters now, not what changed
+- Let the code speak for itself
+
+## Documentation Philosophy
+
+- **Do not generate documentation files unless explicitly asked**
+- Document the current, latest state only
+- Never document changes or differences versus previous implementation
+- Focus on clarity and accuracy in current state documentation
