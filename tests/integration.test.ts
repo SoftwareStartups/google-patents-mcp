@@ -13,7 +13,6 @@
  * 8. Shut down cleanly
  */
 
-import { spawn, ChildProcess } from 'child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import * as path from 'path';
@@ -44,6 +43,27 @@ interface TestResult {
   duration: number;
 }
 
+interface SerpApiResponse {
+  search_metadata?: {
+    status?: string;
+  };
+  search_parameters?: {
+    page?: number;
+    [key: string]: unknown;
+  };
+  organic_results?: unknown[];
+  [key: string]: unknown;
+}
+
+interface ToolResponse {
+  content: Array<{
+    type: string;
+    text?: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
 class IntegrationTest {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
@@ -54,6 +74,7 @@ class IntegrationTest {
   constructor() {}
 
   private log(message: string, color: string = colors.reset) {
+    // eslint-disable-next-line no-console
     console.log(`${color}${message}${colors.reset}`);
   }
 
@@ -126,7 +147,8 @@ class IntegrationTest {
         await this.client.close();
         this.log('\n✓ MCP server disconnected', colors.green);
       } catch (error) {
-        this.log(`Warning: Error during cleanup: ${error}`, colors.yellow);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        this.log(`Warning: Error during cleanup: ${errorMsg}`, colors.yellow);
       }
     }
   }
@@ -162,8 +184,10 @@ class IntegrationTest {
     }
 
     // Check for required 'q' parameter
-    const schema = searchPatentsTool.inputSchema as any;
-    if (!schema.properties.q) {
+    const schema = searchPatentsTool.inputSchema as {
+      properties?: { q?: unknown };
+    };
+    if (!schema.properties?.q) {
       throw new Error('search_patents tool missing required "q" parameter');
     }
 
@@ -189,7 +213,7 @@ class IntegrationTest {
     this.validateResponse(response);
     const data = this.parseResponseData(response);
     this.log(
-      `  Received ${data.organic_results?.length || 0} results`,
+      `  Received ${data.organic_results?.length ?? 0} results`,
       colors.cyan
     );
   }
@@ -213,7 +237,7 @@ class IntegrationTest {
     this.validateResponse(response);
     const data = this.parseResponseData(response);
     this.log(
-      `  Filtered search returned ${data.organic_results?.length || 0} results`,
+      `  Filtered search returned ${data.organic_results?.length ?? 0} results`,
       colors.cyan
     );
   }
@@ -260,7 +284,7 @@ class IntegrationTest {
     this.validateResponse(response);
     const data = this.parseResponseData(response);
     this.log(
-      `  Sorted search returned ${data.organic_results?.length || 0} results`,
+      `  Sorted search returned ${data.organic_results?.length ?? 0} results`,
       colors.cyan
     );
   }
@@ -282,12 +306,12 @@ class IntegrationTest {
     this.validateResponse(response);
     const data = this.parseResponseData(response);
     this.log(
-      `  Assignee-filtered search returned ${data.organic_results?.length || 0} results`,
+      `  Assignee-filtered search returned ${data.organic_results?.length ?? 0} results`,
       colors.cyan
     );
   }
 
-  private validateResponse(response: any): void {
+  private validateResponse(response: ToolResponse): void {
     if (!response.content || !Array.isArray(response.content)) {
       throw new Error('Invalid response: content array not found');
     }
@@ -304,13 +328,17 @@ class IntegrationTest {
     }
   }
 
-  private parseResponseData(response: any): any {
+  private parseResponseData(response: ToolResponse): SerpApiResponse {
     const firstContent = response.content[0];
-    let data: any;
 
+    if (!firstContent.text) {
+      throw new Error('Response text is missing');
+    }
+
+    let data: SerpApiResponse;
     try {
-      data = JSON.parse(firstContent.text);
-    } catch (error) {
+      data = JSON.parse(firstContent.text) as SerpApiResponse;
+    } catch {
       throw new Error('Response text is not valid JSON');
     }
 
@@ -323,7 +351,9 @@ class IntegrationTest {
     }
 
     if (data.search_metadata.status !== 'Success') {
-      throw new Error(`SerpApi search status: ${data.search_metadata.status}`);
+      throw new Error(
+        `SerpApi search status: ${data.search_metadata.status ?? 'unknown'}`
+      );
     }
 
     return data;
@@ -407,7 +437,8 @@ class IntegrationTest {
         });
       }
     } catch (error) {
-      this.log(`\n❌ Unexpected error: ${error}`, colors.red);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log(`\n❌ Unexpected error: ${errorMsg}`, colors.red);
     } finally {
       // Cleanup
       await this.teardownClient();
@@ -420,7 +451,9 @@ class IntegrationTest {
 
 // Run the integration tests
 const test = new IntegrationTest();
-test.run().catch((error) => {
-  console.error(`${colors.red}Fatal error: ${error}${colors.reset}`);
+test.run().catch((error: unknown) => {
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  // eslint-disable-next-line no-console
+  console.error(`${colors.red}Fatal error: ${errorMsg}${colors.reset}`);
   process.exit(1);
 });

@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { describe, it, expect, vi } from 'vitest';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 // Mock modules
@@ -30,16 +29,23 @@ describe('Google Patents MCP Server', () => {
   describe('Tool Registration', () => {
     it('should register search_patents tool', async () => {
       const { default: fetch } = await import('node-fetch');
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        json: async () => ({ search_metadata: { status: 'Success' } }),
-      } as any);
+      const { Response } = await import('node-fetch');
+
+      vi.mocked(fetch).mockResolvedValue(
+        new Response(
+          JSON.stringify({ search_metadata: { status: 'Success' } }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      );
 
       // Set API key for tests
       process.env.SERPAPI_API_KEY = 'test_api_key';
 
       // Import server after mocks are set up
-      const serverModule = await import('../../src/index.js');
+      const _serverModule = await import('../../src/index.js');
 
       // Give server time to initialize
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -53,28 +59,28 @@ describe('Google Patents MCP Server', () => {
         properties: {
           q: expect.objectContaining({
             type: 'string',
-            description: expect.any(String),
-          }),
+            description: expect.any(String) as string,
+          }) as { type: string; description: string },
           page: expect.objectContaining({
             type: 'integer',
-          }),
+          }) as { type: string },
           num: expect.objectContaining({
             type: 'integer',
             minimum: 10,
             maximum: 100,
-          }),
+          }) as { type: string; minimum: number; maximum: number },
           sort: expect.objectContaining({
             type: 'string',
             enum: ['relevance', 'new', 'old'],
-          }),
+          }) as { type: string; enum: string[] },
           status: expect.objectContaining({
             type: 'string',
             enum: ['GRANT', 'APPLICATION'],
-          }),
+          }) as { type: string; enum: string[] },
           type: expect.objectContaining({
             type: 'string',
             enum: ['PATENT', 'DESIGN'],
-          }),
+          }) as { type: string; enum: string[] },
         },
         required: ['q'],
       };
@@ -248,7 +254,24 @@ describe('Google Patents MCP Server', () => {
 
   describe('Response Formatting', () => {
     it('should format successful response correctly', () => {
-      const mockData = {
+      interface MockData {
+        search_metadata: {
+          status: string;
+          id: string;
+          processed_at: string;
+        };
+        search_parameters: {
+          engine: string;
+          q: string;
+        };
+        organic_results: Array<{
+          title: string;
+          patent_id: string;
+          snippet: string;
+        }>;
+      }
+
+      const mockData: MockData = {
         search_metadata: {
           status: 'Success',
           id: 'test123',
@@ -281,7 +304,7 @@ describe('Google Patents MCP Server', () => {
       expect(response.content[0].text).toContain('search_metadata');
       expect(response.content[0].text).toContain('organic_results');
 
-      const parsedData = JSON.parse(response.content[0].text);
+      const parsedData = JSON.parse(response.content[0].text) as MockData;
       expect(parsedData.search_metadata.status).toBe('Success');
       expect(parsedData.organic_results).toHaveLength(1);
     });
