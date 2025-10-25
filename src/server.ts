@@ -1,16 +1,16 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ListPromptsRequestSchema,
-  McpError,
-  ErrorCode,
+    CallToolRequestSchema,
+    ErrorCode,
+    ListPromptsRequestSchema,
+    ListResourcesRequestSchema,
+    ListToolsRequestSchema,
+    McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
-import type { SearchPatentsArgs } from './types.js';
 import type { SerpApiClient } from './services/serpapi.js';
+import type { SearchPatentsArgs } from './types.js';
 
 export class GooglePatentsServer {
   private readonly server: Server;
@@ -63,7 +63,7 @@ export class GooglePatentsServer {
           {
             name: 'search_patents',
             description:
-              'Searches Google Patents using SerpApi. Allows filtering by date, inventor, assignee, country, language, status, type, and sorting.',
+              'Searches Google Patents using SerpApi. Allows filtering by date, inventor, assignee, country, language, status, type, and sorting. Can optionally fetch full patent content including claims and descriptions.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -137,6 +137,24 @@ export class GooglePatentsServer {
                   type: 'boolean',
                   description:
                     'Include Google Scholar results (default: false).',
+                  default: false,
+                },
+                include_full_content: {
+                  type: 'boolean',
+                  description:
+                    'Fetch and include full patent text, including claims and description (default: false). This makes an additional HTTP request per patent to fetch complete content from Google Patents.',
+                  default: false,
+                },
+                include_claims: {
+                  type: 'boolean',
+                  description:
+                    'Fetch and include patent claims only (default: false). More efficient than include_full_content if only claims are needed.',
+                  default: false,
+                },
+                include_description: {
+                  type: 'boolean',
+                  description:
+                    'Fetch and include patent description only (default: false). More efficient than include_full_content if only description is needed.',
                   default: false,
                 },
               },

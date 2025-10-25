@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('Google Patents MCP Server - Unit Tests', () => {
   describe('Config Module', () => {
@@ -357,6 +357,15 @@ describe('Google Patents MCP Server - Unit Tests', () => {
             type: 'string',
             enum: ['PATENT', 'DESIGN'],
           }) as { type: string; enum: string[] },
+          include_full_content: expect.objectContaining({
+            type: 'boolean',
+          }) as { type: string },
+          include_claims: expect.objectContaining({
+            type: 'boolean',
+          }) as { type: string },
+          include_description: expect.objectContaining({
+            type: 'boolean',
+          }) as { type: string },
         },
         required: [],
       };
@@ -364,6 +373,9 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       // q is now optional, not required
       expect(expectedSchema.required).toEqual([]);
       expect(expectedSchema.properties.q).toBeDefined();
+      expect(expectedSchema.properties.include_full_content).toBeDefined();
+      expect(expectedSchema.properties.include_claims).toBeDefined();
+      expect(expectedSchema.properties.include_description).toBeDefined();
     });
 
     it('should handle search_patents with assignee filter only (no query)', async () => {
@@ -606,6 +618,199 @@ describe('Google Patents MCP Server - Unit Tests', () => {
       expect(isApiKeyValid('')).toBe(false);
       expect(isApiKeyValid(undefined)).toBe(false);
       expect(isApiKeyValid('valid_key')).toBe(true);
+    });
+  });
+
+  describe('Full Content Parameters', () => {
+    it('should accept include_full_content parameter', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockResponse = {
+        organic_results: [
+          {
+            patent_id: 'US1234567',
+            title: 'Test Patent',
+            patent_link: 'https://patents.google.com/patent/US1234567',
+            full_content: {
+              content_included: true,
+              claims: ['Claim 1'],
+              description: 'Description',
+              full_text: 'Full text',
+            },
+          },
+        ],
+      };
+
+      const mockSerpApiClient = {
+        searchPatents: vi.fn().mockResolvedValue(mockResponse),
+      };
+
+      const { GooglePatentsServer } = await import('../../src/server.js');
+      const serverInstance = new GooglePatentsServer(
+        '1.0.0',
+        mockLogger as never,
+        mockSerpApiClient as never
+      );
+
+      const result = await (
+        serverInstance as unknown as {
+          handleSearchPatents: (
+            args: Record<string, unknown>
+          ) => Promise<{ content: Array<{ type: string; text: string }> }>;
+        }
+      ).handleSearchPatents({
+        q: 'test',
+        include_full_content: true,
+      });
+
+      expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith({
+        q: 'test',
+        include_full_content: true,
+      });
+
+      const parsedResult = JSON.parse(result.content[0].text) as {
+        organic_results: Array<{
+          full_content?: {
+            content_included: boolean;
+            claims?: string[];
+            description?: string;
+            full_text?: string;
+          };
+        }>;
+      };
+      expect(parsedResult.organic_results[0].full_content).toBeDefined();
+      expect(
+        parsedResult.organic_results[0].full_content?.content_included
+      ).toBe(true);
+    });
+
+    it('should accept include_claims parameter', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockResponse = {
+        organic_results: [
+          {
+            patent_id: 'US1234567',
+            title: 'Test Patent',
+            patent_link: 'https://patents.google.com/patent/US1234567',
+            full_content: {
+              content_included: true,
+              claims: ['Claim 1', 'Claim 2'],
+            },
+          },
+        ],
+      };
+
+      const mockSerpApiClient = {
+        searchPatents: vi.fn().mockResolvedValue(mockResponse),
+      };
+
+      const { GooglePatentsServer } = await import('../../src/server.js');
+      const serverInstance = new GooglePatentsServer(
+        '1.0.0',
+        mockLogger as never,
+        mockSerpApiClient as never
+      );
+
+      const result = await (
+        serverInstance as unknown as {
+          handleSearchPatents: (
+            args: Record<string, unknown>
+          ) => Promise<{ content: Array<{ type: string; text: string }> }>;
+        }
+      ).handleSearchPatents({
+        q: 'test',
+        include_claims: true,
+      });
+
+      expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith({
+        q: 'test',
+        include_claims: true,
+      });
+
+      const parsedResult = JSON.parse(result.content[0].text) as {
+        organic_results: Array<{
+          full_content?: {
+            content_included: boolean;
+            claims?: string[];
+          };
+        }>;
+      };
+      expect(parsedResult.organic_results[0].full_content?.claims).toHaveLength(
+        2
+      );
+    });
+
+    it('should accept include_description parameter', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockResponse = {
+        organic_results: [
+          {
+            patent_id: 'US1234567',
+            title: 'Test Patent',
+            patent_link: 'https://patents.google.com/patent/US1234567',
+            full_content: {
+              content_included: true,
+              description: 'Test description',
+            },
+          },
+        ],
+      };
+
+      const mockSerpApiClient = {
+        searchPatents: vi.fn().mockResolvedValue(mockResponse),
+      };
+
+      const { GooglePatentsServer } = await import('../../src/server.js');
+      const serverInstance = new GooglePatentsServer(
+        '1.0.0',
+        mockLogger as never,
+        mockSerpApiClient as never
+      );
+
+      const result = await (
+        serverInstance as unknown as {
+          handleSearchPatents: (
+            args: Record<string, unknown>
+          ) => Promise<{ content: Array<{ type: string; text: string }> }>;
+        }
+      ).handleSearchPatents({
+        q: 'test',
+        include_description: true,
+      });
+
+      expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith({
+        q: 'test',
+        include_description: true,
+      });
+
+      const parsedResult = JSON.parse(result.content[0].text) as {
+        organic_results: Array<{
+          full_content?: {
+            content_included: boolean;
+            description?: string;
+          };
+        }>;
+      };
+      expect(
+        parsedResult.organic_results[0].full_content?.description
+      ).toBeDefined();
     });
   });
 });

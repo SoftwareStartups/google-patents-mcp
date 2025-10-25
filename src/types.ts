@@ -12,8 +12,35 @@ export interface SearchPatentsArgs {
   status?: 'GRANT' | 'APPLICATION';
   type?: 'PATENT' | 'DESIGN';
   scholar?: boolean;
+  include_full_content?: boolean;
+  include_claims?: boolean;
+  include_description?: boolean;
+}
+
+export interface PatentContent {
+  full_text?: string;
+  claims?: string[];
+  description?: string;
+  content_included: boolean;
+}
+
+export interface PatentResult {
+  patent_id?: string;
+  publication_number?: string;
+  title?: string;
+  snippet?: string;
+  patent_link?: string;
+  assignee?: string;
+  inventor?: string;
+  priority_date?: string;
+  filing_date?: string;
+  grant_date?: string;
+  publication_date?: string;
+  full_content?: PatentContent;
+  [key: string]: unknown;
 }
 
 export interface SerpApiResponse {
+  organic_results?: PatentResult[];
   [key: string]: unknown;
 }
