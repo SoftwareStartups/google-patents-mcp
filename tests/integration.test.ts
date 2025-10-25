@@ -201,14 +201,14 @@ class IntegrationTest {
     const testQuery = 'quantum computer';
     this.log(`  Searching for: "${testQuery}"`, colors.cyan);
 
-    const response = await this.client.callTool({
+    const response = (await this.client.callTool({
       name: 'search_patents',
       arguments: {
         q: testQuery,
         num: 10,
         status: 'GRANT',
       },
-    });
+    })) as ToolResponse;
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
@@ -223,7 +223,7 @@ class IntegrationTest {
 
     this.log(`  Testing search with date and country filters`, colors.cyan);
 
-    const response = await this.client.callTool({
+    const response = (await this.client.callTool({
       name: 'search_patents',
       arguments: {
         q: 'artificial intelligence',
@@ -232,7 +232,7 @@ class IntegrationTest {
         after: 'publication:20200101',
         status: 'GRANT',
       },
-    });
+    })) as ToolResponse;
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
@@ -247,14 +247,14 @@ class IntegrationTest {
 
     this.log(`  Testing pagination (page 2)`, colors.cyan);
 
-    const response = await this.client.callTool({
+    const response = (await this.client.callTool({
       name: 'search_patents',
       arguments: {
         q: 'machine learning',
         num: 10,
         page: 2,
       },
-    });
+    })) as ToolResponse;
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
@@ -272,14 +272,14 @@ class IntegrationTest {
 
     this.log(`  Testing sorting (newest first)`, colors.cyan);
 
-    const response = await this.client.callTool({
+    const response = (await this.client.callTool({
       name: 'search_patents',
       arguments: {
         q: 'neural network',
         num: 10,
         sort: 'new',
       },
-    });
+    })) as ToolResponse;
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
@@ -294,14 +294,14 @@ class IntegrationTest {
 
     this.log(`  Testing inventor/assignee filters`, colors.cyan);
 
-    const response = await this.client.callTool({
+    const response = (await this.client.callTool({
       name: 'search_patents',
       arguments: {
         q: 'semiconductor',
         num: 10,
         assignee: 'Intel',
       },
-    });
+    })) as ToolResponse;
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
