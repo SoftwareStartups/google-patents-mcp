@@ -31,13 +31,13 @@ check: ## Run ESLint and TypeScript type checking
 typecheck: ## Run TypeScript type checking only
 	npm run typecheck
 
-test: ## Run all tests (unit + integration)
+test: build ## Run all tests (unit + integration)
 	npm test
 
 test-unit: ## Run unit tests only
 	npm run test:unit
 
-test-integration: ## Run integration tests only
+test-integration: build ## Run integration tests only
 	npm run test:integration
 
 ci: clean install format-check check build test-unit ## Run full CI pipeline locally

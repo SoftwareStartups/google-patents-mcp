@@ -15,16 +15,6 @@ To install Google Patents MCP Server for Claude Desktop automatically via [Smith
 npx -y @smithery/cli install @KunihiroS/google-patents-mcp --client claude
 ```
 
-## Changelog
-
-### v0.2.0 (2025-04-17)
-
-*   **Fix:** Implemented empty handlers for `resources/list` and `prompts/list` MCP methods.
-*   **Fix:** Declared `prompts` capability in server initialization.
-*   **Chore:** Updated dependencies.
-
-These changes aim to improve compatibility with MCP clients like Claude Desktop which may require these standard endpoints, though direct testing with Claude Desktop has not yet been performed.
-
 ## Features
 
 *   Provides an MCP tool `search_patents` to search Google Patents.
@@ -275,7 +265,7 @@ Run `make check` before committing to ensure code quality.
 
 ## Testing
 
-The project includes a comprehensive smoke integration test that validates the MCP server functionality:
+The project includes unit tests and integration tests:
 
 ```bash
 # Install dependencies and build
@@ -285,23 +275,22 @@ npm run build
 # Set your SerpApi API key
 export SERPAPI_API_KEY="your_api_key_here"
 
-# Run the smoke test
+# Run all tests
 npm test
+
+# Run unit tests only
+npm run test:unit
+
+# Run integration tests only
+npm run test:integration
 ```
 
-The smoke test verifies:
-- Server initialization and connection
-- Tool listing (`search_patents` availability)
-- Actual patent search execution
-- Response structure validation
+Tests validate:
+- Server initialization and MCP protocol compliance
+- Tool registration and schema validation
+- Patent search with various filters and parameters
+- Error handling and response formatting
 - Clean shutdown
-
-**📚 For comprehensive testing documentation, troubleshooting, and CI/CD integration guides, see [TESTING.md](TESTING.md)**
-
-Quick links:
-- [Test Architecture](tests/README.md)
-- [GitHub Actions Setup](.github/workflows/test.yml.example)
-- [Test Runner Script](tests/run-test.sh)
 
 ## Logging
 
