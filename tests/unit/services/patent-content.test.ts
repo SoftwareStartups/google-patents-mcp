@@ -42,7 +42,6 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(true);
       expect(result.claims).toBeDefined();
       expect(result.claims).toHaveLength(2);
       expect(result.claims?.[0]).toContain('1. A method for testing');
@@ -84,7 +83,6 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(true);
       expect(result.description).toBeDefined();
       expect(result.description).toContain('This invention relates');
     });
@@ -123,7 +121,6 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(true);
       expect(result.description).toContain('Abstract:');
       expect(result.description).toContain('A brief summary');
     });
@@ -367,7 +364,7 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/INVALID'
       );
 
-      expect(result.content_included).toBe(false);
+      expect(result).toEqual({});
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to fetch patent content')
       );
@@ -398,7 +395,7 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(false);
+      expect(result).toEqual({});
     });
 
     it('should handle timeout', async () => {
@@ -428,7 +425,7 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(false);
+      expect(result).toEqual({});
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('timed out')
       );
@@ -462,7 +459,237 @@ describe('PatentContentService', () => {
         'https://patents.google.com/patent/US1234567'
       );
 
-      expect(result.content_included).toBe(false);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('Selective Content Retrieval', () => {
+    it('should return only claims when include_claims is true and others false', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>This is the description.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+            <div itemprop="claim" num="2">Claim two</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        true,
+        false,
+        false
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.claims).toHaveLength(2);
+      expect(result.description).toBeUndefined();
+      expect(result.full_text).toBeUndefined();
+    });
+
+    it('should return only description when include_description is true and others false', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>This is the description.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        false,
+        true,
+        false
+      );
+
+      expect(result.description).toBeDefined();
+      expect(result.description).toContain('This is the description');
+      expect(result.claims).toBeUndefined();
+      expect(result.full_text).toBeUndefined();
+    });
+
+    it('should return only full_text when include_full_text is true and others false', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>This is the description.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        false,
+        false,
+        true
+      );
+
+      expect(result.full_text).toBeDefined();
+      expect(result.full_text).toContain('DESCRIPTION:');
+      expect(result.full_text).toContain('CLAIMS:');
+      expect(result.claims).toBeUndefined();
+      expect(result.description).toBeUndefined();
+    });
+
+    it('should return both claims and description but not full_text', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>Description text.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        true,
+        true,
+        false
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.description).toBeDefined();
+      expect(result.full_text).toBeUndefined();
+    });
+
+    it('should return empty object when all flags are false', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>Description text.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        false,
+        false,
+        false
+      );
+
+      expect(result).toEqual({});
     });
   });
 });

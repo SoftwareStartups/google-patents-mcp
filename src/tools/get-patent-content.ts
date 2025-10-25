@@ -12,7 +12,7 @@ import type { ToolDefinition } from './types.js';
 export const getPatentContentToolDefinition: Tool = {
   name: 'get_patent_content',
   description:
-    'Fetches full patent content including claims and description from Google Patents. Accepts either a patent URL (from search results) or a patent ID. Returns parsed patent text with claims, description, and full combined text.',
+    'Fetches full patent content including claims and description from Google Patents. Accepts either a patent URL (from search results) or a patent ID. Returns parsed patent text with selective content control via optional flags.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -25,6 +25,21 @@ export const getPatentContentToolDefinition: Tool = {
         type: 'string',
         description:
           'Patent ID (e.g., "US1234567A" or "patent/US1234567A/en"). Will be converted to a Google Patents URL.',
+      },
+      include_claims: {
+        type: 'boolean',
+        description:
+          'Whether to include patent claims in the response. Defaults to true.',
+      },
+      include_description: {
+        type: 'boolean',
+        description:
+          'Whether to include patent description in the response. Defaults to true.',
+      },
+      include_full_text: {
+        type: 'boolean',
+        description:
+          'Whether to include combined full text (description + claims) in the response. Defaults to true.',
       },
     },
     required: [],
@@ -51,7 +66,18 @@ export function createGetPatentContentTool(
       try {
         // Use patent_url if provided, otherwise use patent_id
         const urlOrId = params.patent_url || params.patent_id || '';
-        const content = await patentContentService.fetchContent(urlOrId);
+
+        // Extract flags with defaults
+        const includeClaims = params.include_claims ?? true;
+        const includeDescription = params.include_description ?? true;
+        const includeFullText = params.include_full_text ?? true;
+
+        const content = await patentContentService.fetchContent(
+          urlOrId,
+          includeClaims,
+          includeDescription,
+          includeFullText
+        );
 
         return {
           content: [

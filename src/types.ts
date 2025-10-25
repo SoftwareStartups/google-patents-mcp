@@ -17,13 +17,15 @@ export interface SearchPatentsArgs {
 export interface GetPatentContentArgs {
   patent_url?: string;
   patent_id?: string;
+  include_claims?: boolean;
+  include_description?: boolean;
+  include_full_text?: boolean;
 }
 
 export interface PatentContent {
   full_text?: string;
   claims?: string[];
   description?: string;
-  content_included: boolean;
 }
 
 export interface PatentResult {

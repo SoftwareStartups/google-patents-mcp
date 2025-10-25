@@ -33,71 +33,92 @@ export class PatentContentService {
   /**
    * Parses patent HTML content to extract full text, claims, and description
    */
-  private parsePatentHtml(html: string): PatentContent {
-    const content: PatentContent = {
-      content_included: false,
-    };
+  private parsePatentHtml(
+    html: string,
+    includeClaims: boolean,
+    includeDescription: boolean,
+    includeFullText: boolean
+  ): PatentContent {
+    const content: PatentContent = {};
 
     try {
-      // Extract claims section
-      const claimsMatch = html.match(
-        /<section[^>]*itemprop="claims"[^>]*>([\s\S]*?)<\/section>/i
-      );
-      if (claimsMatch) {
-        const claimsHtml = claimsMatch[1];
-        // Extract individual claims marked with itemprop="claim"
-        const claimMatches = claimsHtml.matchAll(
-          /<div[^>]*itemprop="claim"[^>]*[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
+      let parsedClaims: string[] | undefined;
+      let parsedDescription: string | undefined;
+
+      // Extract claims section if needed for claims or full_text
+      if (includeClaims || includeFullText) {
+        const claimsMatch = html.match(
+          /<section[^>]*itemprop="claims"[^>]*>([\s\S]*?)<\/section>/i
         );
-        const claims: string[] = [];
-        for (const match of claimMatches) {
-          const claimNum = match[1];
-          const claimText = this.cleanHtmlText(match[2]);
-          if (claimText) {
-            claims.push(`${claimNum}. ${claimText}`);
+        if (claimsMatch) {
+          const claimsHtml = claimsMatch[1];
+          // Extract individual claims marked with itemprop="claim"
+          const claimMatches = claimsHtml.matchAll(
+            /<div[^>]*itemprop="claim"[^>]*[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
+          );
+          const claims: string[] = [];
+          for (const match of claimMatches) {
+            const claimNum = match[1];
+            const claimText = this.cleanHtmlText(match[2]);
+            if (claimText) {
+              claims.push(`${claimNum}. ${claimText}`);
+            }
           }
-        }
-        if (claims.length > 0) {
-          content.claims = claims;
-        }
-      }
-
-      // Extract description section
-      const descMatch = html.match(
-        /<section[^>]*itemprop="description"[^>]*>([\s\S]*?)<\/section>/i
-      );
-      if (descMatch) {
-        const descHtml = descMatch[1];
-        const cleanDesc = this.cleanHtmlText(descHtml);
-        if (cleanDesc) {
-          content.description = cleanDesc;
-        }
-      }
-
-      // Extract abstract as fallback
-      if (!content.description) {
-        const abstractMatch = html.match(
-          /<section[^>]*itemprop="abstract"[^>]*>([\s\S]*?)<\/section>/i
-        );
-        if (abstractMatch) {
-          const abstractText = this.cleanHtmlText(abstractMatch[1]);
-          if (abstractText) {
-            content.description = `Abstract: ${abstractText}`;
+          if (claims.length > 0) {
+            parsedClaims = claims;
           }
         }
       }
 
-      // Generate full_text from available components
-      const parts: string[] = [];
-      if (content.description) {
-        parts.push('DESCRIPTION:\n' + content.description);
+      // Extract description section if needed for description or full_text
+      if (includeDescription || includeFullText) {
+        const descMatch = html.match(
+          /<section[^>]*itemprop="description"[^>]*>([\s\S]*?)<\/section>/i
+        );
+        if (descMatch) {
+          const descHtml = descMatch[1];
+          const cleanDesc = this.cleanHtmlText(descHtml);
+          if (cleanDesc) {
+            parsedDescription = cleanDesc;
+          }
+        }
+
+        // Extract abstract as fallback
+        if (!parsedDescription) {
+          const abstractMatch = html.match(
+            /<section[^>]*itemprop="abstract"[^>]*>([\s\S]*?)<\/section>/i
+          );
+          if (abstractMatch) {
+            const abstractText = this.cleanHtmlText(abstractMatch[1]);
+            if (abstractText) {
+              parsedDescription = `Abstract: ${abstractText}`;
+            }
+          }
+        }
       }
-      if (content.claims && content.claims.length > 0) {
-        parts.push('\n\nCLAIMS:\n' + content.claims.join('\n\n'));
+
+      // Add claims to result if requested
+      if (includeClaims && parsedClaims) {
+        content.claims = parsedClaims;
       }
-      if (parts.length > 0) {
-        content.full_text = parts.join('\n');
-        content.content_included = true;
+
+      // Add description to result if requested
+      if (includeDescription && parsedDescription) {
+        content.description = parsedDescription;
+      }
+
+      // Generate full_text if requested
+      if (includeFullText) {
+        const parts: string[] = [];
+        if (parsedDescription) {
+          parts.push('DESCRIPTION:\n' + parsedDescription);
+        }
+        if (parsedClaims && parsedClaims.length > 0) {
+          parts.push('\n\nCLAIMS:\n' + parsedClaims.join('\n\n'));
+        }
+        if (parts.length > 0) {
+          content.full_text = parts.join('\n');
+        }
       }
     } catch (error) {
       this.logger.warn(
@@ -135,7 +156,12 @@ export class PatentContentService {
   /**
    * Fetches full patent content from a Google Patents URL or patent ID
    */
-  async fetchContent(urlOrId: string): Promise<PatentContent> {
+  async fetchContent(
+    urlOrId: string,
+    includeClaims = true,
+    includeDescription = true,
+    includeFullText = true
+  ): Promise<PatentContent> {
     const patentUrl = this.resolveUrl(urlOrId);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -149,13 +175,18 @@ export class PatentContentService {
         this.logger.warn(
           `Failed to fetch patent content: ${response.status} ${response.statusText}`
         );
-        return { content_included: false };
+        return {};
       }
 
       const html = await response.text();
       clearTimeout(timeoutId);
 
-      return this.parsePatentHtml(html);
+      return this.parsePatentHtml(
+        html,
+        includeClaims,
+        includeDescription,
+        includeFullText
+      );
     } catch (error: unknown) {
       clearTimeout(timeoutId);
 
@@ -167,7 +198,7 @@ export class PatentContentService {
         );
       }
 
-      return { content_included: false };
+      return {};
     }
   }
 }

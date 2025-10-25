@@ -141,25 +141,31 @@ Searches Google Patents via SerpApi. Returns patent metadata only (no full text)
 
 ### `get_patent_content`
 
-Fetches full patent content (claims, description) from Google Patents by URL or ID.
+Fetches full patent content (claims, description) from Google Patents by URL or ID. Supports selective content retrieval through optional flags.
 
 **Parameters:**
 
-| Parameter    | Type   | Required | Description                                        |
-|--------------|--------|----------|----------------------------------------------------|
-| `patent_url` | string | No*      | Full Google Patents URL (from search results)      |
-| `patent_id`  | string | No*      | Patent ID (e.g., 'US1234567A')                     |
+| Parameter             | Type    | Required | Description                                           |
+|-----------------------|---------|----------|-------------------------------------------------------|
+| `patent_url`          | string  | No*      | Full Google Patents URL (from search results)         |
+| `patent_id`           | string  | No*      | Patent ID (e.g., 'US1234567A')                        |
+| `include_claims`      | boolean | No       | Include patent claims in response (default: true)     |
+| `include_description` | boolean | No       | Include patent description in response (default: true)|
+| `include_full_text`   | boolean | No       | Include combined full text in response (default: true)|
 
 *At least one parameter (`patent_url` or `patent_id`) must be provided. If both are provided, `patent_url` takes precedence.
 
-**Returns:** JSON object with:
+**Returns:** JSON object with requested fields:
 
-* `content_included` (boolean): Whether content was successfully fetched
-* `claims` (string[]): Array of patent claims
-* `description` (string): Patent description text
-* `full_text` (string): Combined claims and description
+* `claims` (string[]): Array of patent claims (if `include_claims` is true)
+* `description` (string): Patent description text (if `include_description` is true)
+* `full_text` (string): Combined claims and description (if `include_full_text` is true)
 
-**Example:**
+Fields are omitted from the response if their corresponding flag is set to false or if the content could not be retrieved.
+
+**Examples:**
+
+Fetch all content (default):
 
 ```json
 {
@@ -170,13 +176,41 @@ Fetches full patent content (claims, description) from Google Patents by URL or 
 }
 ```
 
-Or using patent ID:
+Using patent ID:
 
 ```json
 {
   "name": "get_patent_content",
   "arguments": {
     "patent_id": "US7654321B2"
+  }
+}
+```
+
+Fetch only claims:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_id": "US7654321B2",
+    "include_claims": true,
+    "include_description": false,
+    "include_full_text": false
+  }
+}
+```
+
+Fetch description and full text without separate claims:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_url": "https://patents.google.com/patent/US7654321B2",
+    "include_claims": false,
+    "include_description": true,
+    "include_full_text": true
   }
 }
 ```
