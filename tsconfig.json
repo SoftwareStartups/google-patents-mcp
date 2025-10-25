@@ -14,5 +14,5 @@
     "sourceMap": true                         /* Generates corresponding '.map' file. */
   },
   "include": ["src/**/*"],                    /* Specifies the files to include in the program. */
-  "exclude": ["node_modules", "**/*.spec.ts"] /* Specifies the files to exclude from the program. */
+  "exclude": ["node_modules", "**/*.spec.ts", "tests/**/*"] /* Specifies the files to exclude from the program. */
 }

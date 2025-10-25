@@ -16,6 +16,9 @@ import fetch from 'node-fetch'; // Import node-fetch
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Load environment variables from .env file
+dotenv.config();
+
 // ★★★★★★★★★★★★★★★★★★★★★★★★★★
 // ★ デバッグ用ログを追加 ★
 // ★★★★★★★★★★★★★★★★★★★★★★★★★★

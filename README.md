@@ -219,6 +219,36 @@ Returns a JSON object containing the search results from SerpApi. The structure 
     npm run dev
     ```
 
+## Testing
+
+The project includes a comprehensive smoke integration test that validates the MCP server functionality:
+
+```bash
+# Install dependencies and build
+npm install
+npm run build
+
+# Set your SerpApi API key
+export SERPAPI_API_KEY="your_api_key_here"
+
+# Run the smoke test
+npm test
+```
+
+The smoke test verifies:
+- Server initialization and connection
+- Tool listing (`search_patents` availability)
+- Actual patent search execution
+- Response structure validation
+- Clean shutdown
+
+**📚 For comprehensive testing documentation, troubleshooting, and CI/CD integration guides, see [TESTING.md](TESTING.md)**
+
+Quick links:
+- [Test Architecture](tests/README.md)
+- [GitHub Actions Setup](.github/workflows/test.yml.example)
+- [Test Runner Script](tests/run-test.sh)
+
 ## Logging
 
 *   Logs are output to standard error.
