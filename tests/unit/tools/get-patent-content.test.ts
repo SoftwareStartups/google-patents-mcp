@@ -59,7 +59,8 @@ describe('get_patent_content Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true,
       true,
-      true
+      true,
+      undefined
     );
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
@@ -100,7 +101,8 @@ describe('get_patent_content Tool', () => {
       'US1234567A',
       true,
       true,
-      true
+      true,
+      undefined
     );
     expect(result.content[0].type).toBe('text');
     const text = result.content[0].text as string;
@@ -139,7 +141,8 @@ describe('get_patent_content Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true,
       true,
-      true
+      true,
+      undefined
     );
   });
 
@@ -263,7 +266,8 @@ describe('get_patent_content Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true,
       true,
-      true
+      true,
+      undefined
     );
   });
 
@@ -299,7 +303,8 @@ describe('get_patent_content Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true,
       false,
-      false
+      false,
+      undefined
     );
   });
 
@@ -335,7 +340,8 @@ describe('get_patent_content Tool', () => {
       'US1234567A',
       false,
       true,
-      false
+      false,
+      undefined
     );
 
     const text = result.content[0].text as string;
@@ -347,6 +353,114 @@ describe('get_patent_content Tool', () => {
     expect(parsedContent).toEqual({ description: 'Test description only' });
     expect(parsedContent.claims).toBeUndefined();
     expect(parsedContent.full_text).toBeUndefined();
+  });
+
+  it('should pass max_length parameter to service', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      description: 'Truncated description',
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_url: 'https://patents.google.com/patent/US1234567',
+      max_length: 1000,
+    });
+
+    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+      'https://patents.google.com/patent/US1234567',
+      true,
+      true,
+      true,
+      1000
+    );
+  });
+
+  it('should handle max_length with selective content flags', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      claims: ['Claim 1'],
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_id: 'US1234567A',
+      include_claims: true,
+      include_description: false,
+      include_full_text: false,
+      max_length: 500,
+    });
+
+    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+      'US1234567A',
+      true,
+      false,
+      false,
+      500
+    );
+  });
+
+  it('should return truncated content when max_length is applied', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      description:
+        'Short description\n\n[Content truncated - 50 of 10000 characters shown]',
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    const result = await tool.handler({
+      patent_id: 'US1234567A',
+      include_description: true,
+      include_claims: false,
+      include_full_text: false,
+      max_length: 100,
+    });
+
+    const text = result.content[0].text as string;
+    const parsedContent = JSON.parse(text) as { description?: string };
+    expect(parsedContent.description).toContain('[Content truncated');
   });
 });
 

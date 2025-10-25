@@ -152,6 +152,7 @@ Fetches full patent content (claims, description) from Google Patents by URL or 
 | `include_claims`      | boolean | No       | Include patent claims in response (default: true)     |
 | `include_description` | boolean | No       | Include patent description in response (default: true)|
 | `include_full_text`   | boolean | No       | Include combined full text in response (default: true)|
+| `max_length`          | integer | No       | Maximum character length for returned content. Content will be truncated at natural boundaries (paragraph ends, complete claims). If omitted, no limit is applied. |
 
 *At least one parameter (`patent_url` or `patent_id`) must be provided. If both are provided, `patent_url` takes precedence.
 
@@ -211,6 +212,33 @@ Fetch description and full text without separate claims:
     "include_claims": false,
     "include_description": true,
     "include_full_text": true
+  }
+}
+```
+
+Fetch content with length limit to minimize token usage:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_id": "US7654321B2",
+    "max_length": 5000
+  }
+}
+```
+
+Fetch only claims with length limit:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_url": "https://patents.google.com/patent/US7654321B2",
+    "include_claims": true,
+    "include_description": false,
+    "include_full_text": false,
+    "max_length": 2000
   }
 }
 ```

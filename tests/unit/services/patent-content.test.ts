@@ -692,5 +692,236 @@ describe('PatentContentService', () => {
       expect(result).toEqual({});
     });
   });
+
+  describe('Content Truncation', () => {
+    it('should truncate description at paragraph boundary', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const longDescription = 'First paragraph.\n\nSecond paragraph.\n\nThird paragraph that is very long and will be truncated.';
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>${longDescription}</p>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        false,
+        true,
+        false,
+        50
+      );
+
+      expect(result.description).toBeDefined();
+      expect(result.description).toContain('[Content truncated');
+      // Check that it actually truncated the original content, not just the total length
+      const originalTextBeforeIndicator = result.description!.split('[Content truncated')[0].trim();
+      expect(originalTextBeforeIndicator.length).toBeLessThan(longDescription.length);
+    });
+
+    it('should truncate claims array to complete claims only', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">First claim that is reasonably long</div>
+            <div itemprop="claim" num="2">Second claim that is also long</div>
+            <div itemprop="claim" num="3">Third claim</div>
+            <div itemprop="claim" num="4">Fourth claim</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        true,
+        false,
+        false,
+        100
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.claims!.length).toBeLessThan(4);
+      expect(result.claims!.length).toBeGreaterThan(0);
+    });
+
+    it('should truncate full_text at natural boundaries', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>This is a very long description that goes on and on with multiple paragraphs and lots of technical detail about the invention.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">First claim with details</div>
+            <div itemprop="claim" num="2">Second claim with more details</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        true,
+        true,
+        true,
+        150
+      );
+
+      expect(result.full_text).toBeDefined();
+      expect(result.full_text).toContain('[Content truncated');
+      expect(result.full_text!.length).toBeLessThanOrEqual(200); // Some buffer for indicator
+    });
+
+    it('should not truncate when content is below max_length', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>Short text.</p>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        false,
+        true,
+        false,
+        1000
+      );
+
+      expect(result.description).toBeDefined();
+      expect(result.description).not.toContain('[Content truncated');
+      expect(result.description).toContain('Short text');
+    });
+
+    it('should work with max_length and selective content flags', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="description">
+            <p>Long description text that should be truncated when max_length is applied.</p>
+          </section>
+          <section itemprop="claims">
+            <div itemprop="claim" num="1">Claim one</div>
+            <div itemprop="claim" num="2">Claim two</div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/US1234567',
+        true,
+        false,
+        false,
+        50
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.description).toBeUndefined();
+      expect(result.full_text).toBeUndefined();
+    });
+  });
 });
 

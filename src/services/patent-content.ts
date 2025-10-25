@@ -37,7 +37,8 @@ export class PatentContentService {
     html: string,
     includeClaims: boolean,
     includeDescription: boolean,
-    includeFullText: boolean
+    includeFullText: boolean,
+    maxLength?: number
   ): PatentContent {
     const content: PatentContent = {};
 
@@ -97,27 +98,62 @@ export class PatentContentService {
         }
       }
 
-      // Add claims to result if requested
-      if (includeClaims && parsedClaims) {
-        content.claims = parsedClaims;
-      }
-
-      // Add description to result if requested
-      if (includeDescription && parsedDescription) {
-        content.description = parsedDescription;
-      }
-
-      // Generate full_text if requested
-      if (includeFullText) {
-        const parts: string[] = [];
-        if (parsedDescription) {
-          parts.push('DESCRIPTION:\n' + parsedDescription);
+      // Apply truncation if maxLength is specified
+      if (maxLength && maxLength > 0) {
+        // Truncate claims if requested
+        if (includeClaims && parsedClaims) {
+          const truncated = this.truncateClaims(parsedClaims, maxLength);
+          content.claims = truncated.claims;
         }
-        if (parsedClaims && parsedClaims.length > 0) {
-          parts.push('\n\nCLAIMS:\n' + parsedClaims.join('\n\n'));
+
+        // Truncate description if requested
+        if (includeDescription && parsedDescription) {
+          const truncated = this.truncateDescription(
+            parsedDescription,
+            maxLength
+          );
+          content.description = truncated.text;
         }
-        if (parts.length > 0) {
-          content.full_text = parts.join('\n');
+
+        // Generate and truncate full_text if requested
+        if (includeFullText) {
+          const parts: string[] = [];
+          if (parsedDescription) {
+            parts.push('DESCRIPTION:\n' + parsedDescription);
+          }
+          if (parsedClaims && parsedClaims.length > 0) {
+            parts.push('\n\nCLAIMS:\n' + parsedClaims.join('\n\n'));
+          }
+          if (parts.length > 0) {
+            const fullText = parts.join('\n');
+            const truncated = this.truncateFullText(fullText, maxLength);
+            content.full_text = truncated.text;
+          }
+        }
+      } else {
+        // No truncation - add content as-is
+        // Add claims to result if requested
+        if (includeClaims && parsedClaims) {
+          content.claims = parsedClaims;
+        }
+
+        // Add description to result if requested
+        if (includeDescription && parsedDescription) {
+          content.description = parsedDescription;
+        }
+
+        // Generate full_text if requested
+        if (includeFullText) {
+          const parts: string[] = [];
+          if (parsedDescription) {
+            parts.push('DESCRIPTION:\n' + parsedDescription);
+          }
+          if (parsedClaims && parsedClaims.length > 0) {
+            parts.push('\n\nCLAIMS:\n' + parsedClaims.join('\n\n'));
+          }
+          if (parts.length > 0) {
+            content.full_text = parts.join('\n');
+          }
         }
       }
     } catch (error) {
@@ -127,6 +163,123 @@ export class PatentContentService {
     }
 
     return content;
+  }
+
+  /**
+   * Truncates description text at paragraph boundaries
+   */
+  private truncateDescription(
+    text: string,
+    maxLength: number
+  ): { text: string; truncated: boolean } {
+    if (text.length <= maxLength) {
+      return { text, truncated: false };
+    }
+
+    // Try to find last paragraph break (\n\n) before maxLength
+    let truncateAt = text.lastIndexOf('\n\n', maxLength);
+
+    // If no paragraph break found, try single newline
+    if (truncateAt === -1) {
+      truncateAt = text.lastIndexOf('\n', maxLength);
+    }
+
+    // If no newline found, truncate at word boundary
+    if (truncateAt === -1) {
+      truncateAt = text.lastIndexOf(' ', maxLength);
+    }
+
+    // Fallback to hard truncate if no good boundary found
+    if (truncateAt === -1 || truncateAt < maxLength * 0.8) {
+      truncateAt = maxLength;
+    }
+
+    const truncatedText = text.substring(0, truncateAt).trim();
+    const indicator = `\n\n[Content truncated - ${truncatedText.length} of ${text.length} characters shown]`;
+
+    return { text: truncatedText + indicator, truncated: true };
+  }
+
+  /**
+   * Truncates claims array to include only complete claims within maxLength
+   */
+  private truncateClaims(
+    claims: string[],
+    maxLength: number
+  ): { claims: string[]; truncated: boolean } {
+    let totalLength = 0;
+    const includedClaims: string[] = [];
+
+    for (const claim of claims) {
+      const claimLength = claim.length + 2; // +2 for newlines between claims
+      if (totalLength + claimLength <= maxLength) {
+        includedClaims.push(claim);
+        totalLength += claimLength;
+      } else {
+        break;
+      }
+    }
+
+    const truncated = includedClaims.length < claims.length;
+    return { claims: includedClaims, truncated };
+  }
+
+  /**
+   * Truncates full text at natural boundaries (paragraphs or claim boundaries)
+   */
+  private truncateFullText(
+    text: string,
+    maxLength: number
+  ): { text: string; truncated: boolean } {
+    if (text.length <= maxLength) {
+      return { text, truncated: false };
+    }
+
+    // Try to preserve complete sections
+    const descriptionMatch = text.match(/^DESCRIPTION:\n([\s\S]*?)(?=\n\nCLAIMS:|$)/);
+    const claimsMatch = text.match(/\n\nCLAIMS:\n([\s\S]*)$/);
+
+    let result = '';
+    let remaining = maxLength;
+
+    // Try to include description section
+    if (descriptionMatch && descriptionMatch[0].length < remaining) {
+      result = descriptionMatch[0];
+      remaining -= descriptionMatch[0].length;
+    } else if (descriptionMatch) {
+      // Truncate description to fit
+      const descPart = this.truncateDescription(
+        descriptionMatch[0],
+        maxLength
+      );
+      return { text: descPart.text, truncated: true };
+    }
+
+    // Try to include claims section if there's room
+    if (claimsMatch && remaining > 50) {
+      const claimsText = claimsMatch[0];
+      if (result.length + claimsText.length <= maxLength) {
+        result += claimsText;
+      } else {
+        // Truncate at claim boundaries
+        const claimLines = claimsText.split('\n\n');
+        for (const line of claimLines) {
+          if (result.length + line.length + 2 <= maxLength) {
+            result += (result.length > 0 ? '\n\n' : '') + line;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    if (result.length === 0) {
+      // Fallback to simple truncation
+      return this.truncateDescription(text, maxLength);
+    }
+
+    const indicator = `\n\n[Content truncated - ${result.length} of ${text.length} characters shown]`;
+    return { text: result.trim() + indicator, truncated: true };
   }
 
   /**
@@ -160,7 +313,8 @@ export class PatentContentService {
     urlOrId: string,
     includeClaims = true,
     includeDescription = true,
-    includeFullText = true
+    includeFullText = true,
+    maxLength?: number
   ): Promise<PatentContent> {
     const patentUrl = this.resolveUrl(urlOrId);
     const controller = new AbortController();
@@ -185,7 +339,8 @@ export class PatentContentService {
         html,
         includeClaims,
         includeDescription,
-        includeFullText
+        includeFullText,
+        maxLength
       );
     } catch (error: unknown) {
       clearTimeout(timeoutId);

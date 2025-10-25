@@ -20,6 +20,7 @@ export interface GetPatentContentArgs {
   include_claims?: boolean;
   include_description?: boolean;
   include_full_text?: boolean;
+  max_length?: number;
 }
 
 export interface PatentContent {

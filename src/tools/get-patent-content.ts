@@ -41,6 +41,11 @@ export const getPatentContentToolDefinition: Tool = {
         description:
           'Whether to include combined full text (description + claims) in the response. Defaults to true.',
       },
+      max_length: {
+        type: 'integer',
+        description:
+          'Maximum character length for returned content. Content will be truncated at natural boundaries (paragraph ends for descriptions, complete claims for claims arrays). If omitted, no limit is applied.',
+      },
     },
     required: [],
   },
@@ -71,12 +76,14 @@ export function createGetPatentContentTool(
         const includeClaims = params.include_claims ?? true;
         const includeDescription = params.include_description ?? true;
         const includeFullText = params.include_full_text ?? true;
+        const maxLength = params.max_length;
 
         const content = await patentContentService.fetchContent(
           urlOrId,
           includeClaims,
           includeDescription,
-          includeFullText
+          includeFullText,
+          maxLength
         );
 
         return {
