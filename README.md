@@ -22,8 +22,10 @@ npx -y @smithery/cli install @SoftwareStartups/google-patents-mcp --client claud
 
 ## Features
 
-* Provides an MCP tool `search_patents` to search Google Patents.
-* Uses SerpApi as the backend.
+* Provides two focused MCP tools for patent research:
+  * `search_patents` - Fast metadata search via SerpApi
+  * `get_patent_content` - Fetch full patent text (claims, description)
+* Uses SerpApi for search and direct Google Patents scraping for full content.
 * Can be run directly using `npx` without local installation.
 
 ## Prerequisites
@@ -96,108 +98,120 @@ following ways:
    * `./.env` (relative to where `npx` is run)
    * `~/.google-patents-mcp.env` (in your home directory)
 
-## Provided MCP Tool
+## Provided MCP Tools
 
 ### `search_patents`
 
-Searches Google Patents via SerpApi.
+Searches Google Patents via SerpApi. Returns patent metadata only (no full text).
 
-**Input Schema:**
+**Parameters:**
+
+| Parameter  | Type    | Required | Description                                           |
+|------------|---------|----------|-------------------------------------------------------|
+| `q`        | string  | No       | Search query. Use semicolon to separate terms        |
+| `page`     | integer | No       | Page number for pagination (default: 1)              |
+| `num`      | integer | No       | Results per page (10-100, default: 10)               |
+| `sort`     | string  | No       | Sort by: 'relevance', 'new', 'old' (default: 'relevance') |
+| `before`   | string  | No       | Max date filter (e.g., 'publication:20231231')       |
+| `after`    | string  | No       | Min date filter (e.g., 'publication:20230101')       |
+| `inventor` | string  | No       | Filter by inventor names (comma-separated)           |
+| `assignee` | string  | No       | Filter by assignee names (comma-separated)           |
+| `country`  | string  | No       | Filter by country codes (e.g., 'US', 'WO,JP')        |
+| `language` | string  | No       | Filter by language (e.g., 'ENGLISH', 'JAPANESE')     |
+| `status`   | string  | No       | Filter by status: 'GRANT' or 'APPLICATION'           |
+| `type`     | string  | No       | Filter by type: 'PATENT' or 'DESIGN'                 |
+| `scholar`  | boolean | No       | Include Google Scholar results (default: false)      |
+
+**Returns:** Patent metadata including title, publication number, assignee, inventor, dates, and `patent_link` (used for `get_patent_content`).
+
+**Example:**
 
 ```json
 {
-  "type": "object",
-  "properties": {
-    "q": {
-      "type": "string",
-      "description": "Search query (required). Use semicolon to separate terms."
-    },
-    "page": {
-      "type": "integer",
-      "description": "Page number for pagination (default: 1).",
-      "default": 1
-    },
-    "num": {
-      "type": "integer",
-      "description": "Number of results per page (10-100, default: 10).",
-      "default": 10,
-      "minimum": 10,
-      "maximum": 100
-    },
-    "sort": {
-      "type": "string",
-      "enum": ["relevance", "new", "old"],
-      "description": "Sort by relevance (default), new, or old.",
-      "default": "relevance"
-    },
-    "before": {
-      "type": "string",
-      "description": "Maximum date (e.g., 'publication:20231231')."
-    },
-    "after": {
-      "type": "string",
-      "description": "Minimum date (e.g., 'publication:20230101')."
-    },
-    "inventor": {
-      "type": "string",
-      "description": "Filter by inventor names (comma-separated)."
-    },
-    "assignee": {
-      "type": "string",
-      "description": "Filter by assignee names (comma-separated)."
-    },
-    "country": {
-      "type": "string",
-      "description": "Filter by country codes (e.g., 'US', 'WO,JP'). Comma-separated."
-    },
-    "language": {
-      "type": "string",
-      "description": "Filter by language (e.g., 'ENGLISH', 'JAPANESE,GERMAN'). Comma-separated."
-    },
-    "status": {
-      "type": "string",
-      "enum": ["GRANT", "APPLICATION"],
-      "description": "Filter by patent status: 'GRANT' or 'APPLICATION'."
-    },
-    "type": {
-      "type": "string",
-      "enum": ["PATENT", "DESIGN"],
-      "description": "Filter by patent type: 'PATENT' or 'DESIGN'."
-    },
-    "scholar": {
-      "type": "boolean",
-      "description": "Include Google Scholar results (default: false).",
-      "default": false
-    }
-  },
-  "required": ["q"]
+  "name": "search_patents",
+  "arguments": {
+    "q": "quantum computing",
+    "num": 10,
+    "status": "GRANT",
+    "country": "US",
+    "after": "publication:20230101"
+  }
 }
 ```
 
-**Output:**
+### `get_patent_content`
 
-Returns a JSON object containing the search results from SerpApi. The structure
-follows the SerpApi response format.
+Fetches full patent content (claims, description) from Google Patents by URL or ID.
 
-**Example Usage (MCP Request):**
+**Parameters:**
+
+| Parameter    | Type   | Required | Description                                        |
+|--------------|--------|----------|----------------------------------------------------|
+| `patent_url` | string | No*      | Full Google Patents URL (from search results)      |
+| `patent_id`  | string | No*      | Patent ID (e.g., 'US1234567A')                     |
+
+*At least one parameter (`patent_url` or `patent_id`) must be provided. If both are provided, `patent_url` takes precedence.
+
+**Returns:** JSON object with:
+
+* `content_included` (boolean): Whether content was successfully fetched
+* `claims` (string[]): Array of patent claims
+* `description` (string): Patent description text
+* `full_text` (string): Combined claims and description
+
+**Example:**
 
 ```json
 {
-  "mcp_version": "1.0",
-  "type": "CallToolRequest",
-  "id": "req-123",
-  "server_name": "google-patents-mcp",
-  "params": {
-    "name": "search_patents",
-    "arguments": {
-      "q": "organic light emitting diode",
-      "num": 10,
-      "language": "ENGLISH",
-      "status": "GRANT",
-      "after": "publication:20230101"
-    }
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_url": "https://patents.google.com/patent/US7654321B2"
   }
 }
+```
+
+Or using patent ID:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_id": "US7654321B2"
+  }
+}
+```
+
+## Typical Workflow
+
+The two tools are designed to work together:
+
+1. **Search for patents** using `search_patents` to find relevant patents
+2. **Get full content** using `get_patent_content` for patents of interest
+
+Example workflow:
+
+```typescript
+// Step 1: Search for patents
+const searchResult = await callTool({
+  name: "search_patents",
+  arguments: {
+    q: "neural network chip",
+    num: 10,
+    status: "GRANT"
+  }
+});
+
+// Step 2: Get full content for first result
+const firstPatent = searchResult.organic_results[0];
+const contentResult = await callTool({
+  name: "get_patent_content",
+  arguments: {
+    patent_url: firstPatent.patent_link
+  }
+});
+
+// Now you have full patent text including claims
+console.log(contentResult.claims);
 ```
 
 ## Development
@@ -314,14 +328,6 @@ npm run test:unit
 npm run test:integration
 ```
 
-Tests validate:
-
-* Server initialization and MCP protocol compliance
-* Tool registration and schema validation
-* Patent search with various filters and parameters
-* Error handling and response formatting
-* Clean shutdown
-
 ## Logging
 
 * Logs are output to standard error.
@@ -331,7 +337,3 @@ Tests validate:
 * A log file is attempted to be created in the project root
   (`google-patents-server.log`), user's home directory
   (`~/.google-patents-server.log`), or `/tmp/google-patents-server.log`.
-
-## License
-
-MIT License (See LICENSE file)

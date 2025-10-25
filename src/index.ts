@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 import { readFileSync } from 'fs';
-import { GooglePatentsServer } from './server.js';
-import { SerpApiClient } from './services/serpapi.js';
-import { createLogger } from './logger.js';
 import { getConfig } from './config.js';
+import { createLogger } from './logger.js';
+import { GooglePatentsServer } from './server.js';
+import { PatentContentService } from './services/patent-content.js';
+import { SerpApiClient } from './services/serpapi.js';
+import {
+    createGetPatentContentTool,
+    createSearchPatentsTool,
+} from './tools/index.js';
 
 const packageJson = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
@@ -46,12 +51,18 @@ const setupProcessHandlers = () => {
 const main = async () => {
   setupProcessHandlers();
 
+  // Initialize services
   const serpApiClient = new SerpApiClient(config.serpApiKey, logger);
-  const server = new GooglePatentsServer(
-    packageJson.version,
-    logger,
-    serpApiClient
-  );
+  const patentContentService = new PatentContentService(logger);
+
+  // Create tools
+  const tools = [
+    createSearchPatentsTool(serpApiClient, logger),
+    createGetPatentContentTool(patentContentService, logger),
+  ];
+
+  // Initialize server with tools
+  const server = new GooglePatentsServer(packageJson.version, logger, tools);
 
   await server.run();
 };

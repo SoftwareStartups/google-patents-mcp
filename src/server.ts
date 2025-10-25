@@ -9,21 +9,20 @@ import {
     McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
-import type { SerpApiClient } from './services/serpapi.js';
-import type { SearchPatentsArgs } from './types.js';
+import type { ToolDefinition } from './tools/index.js';
 
 export class GooglePatentsServer {
   private readonly server: Server;
   private readonly logger: winston.Logger;
-  private readonly serpApiClient: SerpApiClient;
+  private readonly tools: Map<string, ToolDefinition>;
 
   constructor(
     version: string,
     logger: winston.Logger,
-    serpApiClient: SerpApiClient
+    tools: ToolDefinition[]
   ) {
     this.logger = logger;
-    this.serpApiClient = serpApiClient;
+    this.tools = new Map(tools.map((tool) => [tool.definition.name, tool]));
 
     this.logger.debug('Initializing Google Patents Server');
     this.server = new Server(
@@ -59,109 +58,7 @@ export class GooglePatentsServer {
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       this.logger.debug('ListTools handler called');
       return {
-        tools: [
-          {
-            name: 'search_patents',
-            description:
-              'Searches Google Patents using SerpApi. Allows filtering by date, inventor, assignee, country, language, status, type, and sorting. Can optionally fetch full patent content including claims and descriptions.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                q: {
-                  type: 'string',
-                  description:
-                    "Search query (optional). Use semicolon (;) to separate multiple terms. Advanced syntax like '(Coffee) OR (Tea);(A47J)' is supported. If not provided, will search using other filters (assignee, inventor, etc.). See 'About Google Patents' for details.",
-                },
-                page: {
-                  type: 'integer',
-                  description: 'Page number for pagination (default: 1).',
-                  default: 1,
-                },
-                num: {
-                  type: 'integer',
-                  description:
-                    'Number of results per page (default: 10). **IMPORTANT: Must be 10 or greater (up to 100).**',
-                  default: 10,
-                  minimum: 10,
-                  maximum: 100,
-                },
-                sort: {
-                  type: 'string',
-                  enum: ['relevance', 'new', 'old'],
-                  description:
-                    "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).",
-                  default: 'relevance',
-                },
-                before: {
-                  type: 'string',
-                  description:
-                    "Maximum date filter (e.g., 'publication:20231231', 'filing:20220101'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'.",
-                },
-                after: {
-                  type: 'string',
-                  description:
-                    "Minimum date filter (e.g., 'publication:20230101', 'filing:20220601'). Format: type:YYYYMMDD where type is 'priority', 'filing', or 'publication'.",
-                },
-                inventor: {
-                  type: 'string',
-                  description:
-                    'Filter by inventor names. Separate multiple names with a comma (,).',
-                },
-                assignee: {
-                  type: 'string',
-                  description:
-                    'Filter by assignee names. Separate multiple names with a comma (,).',
-                },
-                country: {
-                  type: 'string',
-                  description:
-                    "Filter by country codes (e.g., 'US', 'WO,JP'). Separate multiple codes with a comma (,).",
-                },
-                language: {
-                  type: 'string',
-                  description:
-                    "Filter by language (e.g., 'ENGLISH', 'JAPANESE,GERMAN'). Separate multiple languages with a comma (,). Supported: ENGLISH, GERMAN, CHINESE, FRENCH, SPANISH, ARABIC, JAPANESE, KOREAN, PORTUGUESE, RUSSIAN, ITALIAN, DUTCH, SWEDISH, FINNISH, NORWEGIAN, DANISH.",
-                },
-                status: {
-                  type: 'string',
-                  enum: ['GRANT', 'APPLICATION'],
-                  description:
-                    "Filter by patent status: 'GRANT' or 'APPLICATION'.",
-                },
-                type: {
-                  type: 'string',
-                  enum: ['PATENT', 'DESIGN'],
-                  description: "Filter by patent type: 'PATENT' or 'DESIGN'.",
-                },
-                scholar: {
-                  type: 'boolean',
-                  description:
-                    'Include Google Scholar results (default: false).',
-                  default: false,
-                },
-                include_full_content: {
-                  type: 'boolean',
-                  description:
-                    'Fetch and include full patent text, including claims and description (default: false). This makes an additional HTTP request per patent to fetch complete content from Google Patents.',
-                  default: false,
-                },
-                include_claims: {
-                  type: 'boolean',
-                  description:
-                    'Fetch and include patent claims only (default: false). More efficient than include_full_content if only claims are needed.',
-                  default: false,
-                },
-                include_description: {
-                  type: 'boolean',
-                  description:
-                    'Fetch and include patent description only (default: false). More efficient than include_full_content if only description is needed.',
-                  default: false,
-                },
-              },
-              required: [],
-            },
-          },
-        ],
+        tools: Array.from(this.tools.values()).map((tool) => tool.definition),
       };
     });
 
@@ -176,14 +73,13 @@ export class GooglePatentsServer {
         `CallTool handler called for tool: ${name} with args: ${JSON.stringify(args, null, 2)}`
       );
 
-      if (name === 'search_patents') {
-        return await this.handleSearchPatents(
-          args as unknown as SearchPatentsArgs
-        );
-      } else {
+      const tool = this.tools.get(name);
+      if (!tool) {
         this.logger.warn(`Received request for unknown tool: ${name}`);
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
       }
+
+      return await tool.handler(args);
     });
   }
 
@@ -200,27 +96,6 @@ export class GooglePatentsServer {
       void this.server.close();
       process.exit(0);
     });
-  }
-
-  private async handleSearchPatents(args: SearchPatentsArgs) {
-    try {
-      const data = await this.serpApiClient.searchPatents(args);
-      return {
-        content: [
-          { type: 'text' as const, text: JSON.stringify(data, null, 2) },
-        ],
-      };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error in handleSearchPatents: ${errorMessage}`);
-
-      if (errorMessage.includes('Missing required argument')) {
-        throw new McpError(ErrorCode.InvalidParams, errorMessage);
-      }
-
-      throw new McpError(ErrorCode.InternalError, errorMessage);
-    }
   }
 
   async run(): Promise<void> {

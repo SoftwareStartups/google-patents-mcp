@@ -15,10 +15,10 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -163,15 +163,23 @@ class IntegrationTest {
       throw new Error('Invalid response: tools array not found');
     }
 
-    // Check for search_patents tool
+    // Check for both tools
     const searchPatentsTool = response.tools.find(
       (tool) => tool.name === 'search_patents'
     );
+    const getPatentContentTool = response.tools.find(
+      (tool) => tool.name === 'get_patent_content'
+    );
+
     if (!searchPatentsTool) {
       throw new Error('search_patents tool not found in tools list');
     }
 
-    // Validate tool schema
+    if (!getPatentContentTool) {
+      throw new Error('get_patent_content tool not found in tools list');
+    }
+
+    // Validate search_patents tool schema
     if (!searchPatentsTool.description) {
       throw new Error('search_patents tool missing description');
     }
@@ -183,16 +191,27 @@ class IntegrationTest {
       throw new Error('search_patents tool missing input schema');
     }
 
-    // Check for required 'q' parameter
-    const schema = searchPatentsTool.inputSchema as {
-      properties?: { q?: unknown };
+    // Validate get_patent_content tool schema
+    if (!getPatentContentTool.description) {
+      throw new Error('get_patent_content tool missing description');
+    }
+
+    if (
+      !getPatentContentTool.inputSchema ||
+      !getPatentContentTool.inputSchema.properties
+    ) {
+      throw new Error('get_patent_content tool missing input schema');
+    }
+
+    const contentSchema = getPatentContentTool.inputSchema as {
+      properties?: { patent_url?: unknown; patent_id?: unknown };
     };
-    if (!schema.properties?.q) {
-      throw new Error('search_patents tool missing required "q" parameter');
+    if (!contentSchema.properties?.patent_url || !contentSchema.properties?.patent_id) {
+      throw new Error('get_patent_content tool missing patent_url or patent_id parameters');
     }
 
     this.log(`  Found ${response.tools.length} tool(s)`, colors.cyan);
-    this.log(`  Tool: ${searchPatentsTool.name}`, colors.cyan);
+    this.log(`  Tools: ${searchPatentsTool.name}, ${getPatentContentTool.name}`, colors.cyan);
   }
 
   private async testBasicSearch(): Promise<void> {
@@ -212,8 +231,19 @@ class IntegrationTest {
 
     this.validateResponse(response);
     const data = this.parseResponseData(response);
+
+    // Verify no full_content in results
+    if (data.organic_results && data.organic_results.length > 0) {
+      const firstResult = data.organic_results[0] as {
+        full_content?: unknown;
+      };
+      if (firstResult.full_content) {
+        throw new Error('search_patents should not include full_content in results');
+      }
+    }
+
     this.log(
-      `  Received ${data.organic_results?.length ?? 0} results`,
+      `  Received ${data.organic_results?.length ?? 0} results (no content)`,
       colors.cyan
     );
   }
@@ -309,6 +339,152 @@ class IntegrationTest {
       `  Assignee-filtered search returned ${data.organic_results?.length ?? 0} results`,
       colors.cyan
     );
+  }
+
+  private async testGetPatentContentByUrl(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(
+      `  Fetching patent content by URL`,
+      colors.cyan
+    );
+
+    // Use a known patent URL
+    const response = (await this.client.callTool({
+      name: 'get_patent_content',
+      arguments: {
+        patent_url: 'https://patents.google.com/patent/US7654321B2',
+      },
+    })) as ToolResponse;
+
+    this.validateResponse(response);
+    const text = response.content[0].text;
+    if (typeof text !== 'string') {
+      throw new Error('Response text is not a string');
+    }
+
+    const content = JSON.parse(text) as {
+      content_included: boolean;
+      claims?: string[];
+      description?: string;
+      full_text?: string;
+    };
+
+    this.log(
+      `  Content fetched: ${content.content_included ? 'yes' : 'no'}`,
+      colors.cyan
+    );
+
+    if (content.content_included) {
+      this.log(
+        `  Has claims: ${content.claims ? 'yes' : 'no'}, Has description: ${content.description ? 'yes' : 'no'}`,
+        colors.cyan
+      );
+    }
+  }
+
+  private async testGetPatentContentById(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(
+      `  Fetching patent content by ID`,
+      colors.cyan
+    );
+
+    const response = (await this.client.callTool({
+      name: 'get_patent_content',
+      arguments: {
+        patent_id: 'US7654321B2',
+      },
+    })) as ToolResponse;
+
+    this.validateResponse(response);
+    const text = response.content[0].text;
+    if (typeof text !== 'string') {
+      throw new Error('Response text is not a string');
+    }
+
+    const content = JSON.parse(text) as {
+      content_included: boolean;
+    };
+
+    this.log(
+      `  Content fetched by ID: ${content.content_included ? 'yes' : 'no'}`,
+      colors.cyan
+    );
+  }
+
+  private async testSearchThenGetContent(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(
+      `  Testing complete workflow: search then get content`,
+      colors.cyan
+    );
+
+    // Step 1: Search for patents
+    const searchResponse = (await this.client.callTool({
+      name: 'search_patents',
+      arguments: {
+        q: 'neural network',
+        num: 10,
+        status: 'GRANT',
+      },
+    })) as ToolResponse;
+
+    this.validateResponse(searchResponse);
+    const searchData = this.parseResponseData(searchResponse);
+
+    if (!searchData.organic_results || searchData.organic_results.length === 0) {
+      throw new Error('No search results returned');
+    }
+
+    this.log(
+      `  Step 1: Found ${searchData.organic_results.length} patents`,
+      colors.cyan
+    );
+
+    // Step 2: Get content for the first patent
+    const firstPatent = searchData.organic_results[0] as {
+      patent_link?: string;
+      patent_id?: string;
+    };
+
+    if (!firstPatent.patent_link && !firstPatent.patent_id) {
+      throw new Error('Patent has no link or ID');
+    }
+
+    const contentArgs = firstPatent.patent_link
+      ? { patent_url: firstPatent.patent_link }
+      : { patent_id: firstPatent.patent_id };
+
+    const contentResponse = (await this.client.callTool({
+      name: 'get_patent_content',
+      arguments: contentArgs,
+    })) as ToolResponse;
+
+    this.validateResponse(contentResponse);
+    const contentText = contentResponse.content[0].text;
+    if (typeof contentText !== 'string') {
+      throw new Error('Response text is not a string');
+    }
+
+    const content = JSON.parse(contentText) as {
+      content_included: boolean;
+      claims?: string[];
+    };
+
+    this.log(
+      `  Step 2: Fetched content for first patent (${content.content_included ? 'success' : 'no content'})`,
+      colors.cyan
+    );
+
+    if (content.content_included && content.claims) {
+      this.log(
+        `  Retrieved ${content.claims.length} claims`,
+        colors.cyan
+      );
+    }
   }
 
   private validateResponse(response: ToolResponse): void {
@@ -434,6 +610,18 @@ class IntegrationTest {
 
         await this.runTest('Search with Inventor/Assignee', async () => {
           await this.testSearchWithInventorAndAssignee();
+        });
+
+        await this.runTest('Get Patent Content by URL', async () => {
+          await this.testGetPatentContentByUrl();
+        });
+
+        await this.runTest('Get Patent Content by ID', async () => {
+          await this.testGetPatentContentById();
+        });
+
+        await this.runTest('Workflow: Search then Get Content', async () => {
+          await this.testSearchThenGetContent();
         });
       }
     } catch (error) {

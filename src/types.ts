@@ -12,9 +12,11 @@ export interface SearchPatentsArgs {
   status?: 'GRANT' | 'APPLICATION';
   type?: 'PATENT' | 'DESIGN';
   scholar?: boolean;
-  include_full_content?: boolean;
-  include_claims?: boolean;
-  include_description?: boolean;
+}
+
+export interface GetPatentContentArgs {
+  patent_url?: string;
+  patent_id?: string;
 }
 
 export interface PatentContent {
@@ -36,7 +38,6 @@ export interface PatentResult {
   filing_date?: string;
   grant_date?: string;
   publication_date?: string;
-  full_content?: PatentContent;
   [key: string]: unknown;
 }
 
