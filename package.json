@@ -1,5 +1,5 @@
 {
-  "name": "@kunihiros/google-patents-mcp",
+  "name": "@softwarestartups/google-patents-mcp",
   "version": "0.3.0",
   "description": "MCP server for searching Google Patents via SerpApi",
   "main": "build/index.js",
@@ -26,15 +26,15 @@
     "serpapi",
     "google patents"
   ],
-  "author": "Kunihiro Sasayama",
+  "author": "SoftwareStartups (https://softwarestartups.com)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KunihiroS/google-patents-mcp.git"
+    "url": "git+https://github.com/SoftwareStartups/google-patents-mcp.git"
   },
-  "homepage": "https://github.com/KunihiroS/google-patents-mcp#readme",
+  "homepage": "https://github.com/SoftwareStartups/google-patents-mcp#readme",
   "bugs": {
-    "url": "https://github.com/KunihiroS/google-patents-mcp/issues"
+    "url": "https://github.com/SoftwareStartups/google-patents-mcp/issues"
   },
   "files": [
     "README.md",

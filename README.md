@@ -1,21 +1,23 @@
 # Google Patents MCP Server (`google-patents-mcp`)
 
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/kunihiros-google-patents-mcp-badge.png)](https://mseep.ai/app/kunihiros-google-patents-mcp)
-
-[![smithery badge](https://smithery.ai/badge/@KunihiroS/google-patents-mcp)](https://smithery.ai/server/@KunihiroS/google-patents-mcp)
-[![npm version](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp.svg)](https://badge.fury.io/js/%40kunihiros%2Fgoogle-patents-mcp)
+[![smithery badge](https://smithery.ai/badge/@SoftwareStartups/google-patents-mcp)](https://smithery.ai/server/@SoftwareStartups/google-patents-mcp)
+[![npm version](https://badge.fury.io/js/%40softwarestartups%2Fgoogle-patents-mcp.svg)](https://badge.fury.io/js/%40softwarestartups%2Fgoogle-patents-mcp)
 
 This project provides a Model Context Protocol (MCP) server that allows
 searching Google Patents information via the
 [SerpApi Google Patents API](https://serpapi.com/google-patents-api).
 
+## Credits
+
+This project is a fork of the original [google-patents-mcp](https://github.com/KunihiroS/google-patents-mcp) by [Kunihiro Sasayama](https://github.com/KunihiroS). We extend our gratitude for the foundational work and inspiration.
+
 ## Installing via Smithery
 
 To install Google Patents MCP Server for Claude Desktop automatically via
-[Smithery](https://smithery.ai/server/@KunihiroS/google-patents-mcp):
+[Smithery](https://smithery.ai/server/@SoftwareStartups/google-patents-mcp):
 
 ```bash
-npx -y @smithery/cli install @KunihiroS/google-patents-mcp --client claude
+npx -y @smithery/cli install @SoftwareStartups/google-patents-mcp --client claude
 ```
 
 ## Features
@@ -37,11 +39,8 @@ The easiest way to run this server is using `npx`. This command downloads
 (if necessary) and runs the server directly.
 
 ```bash
-npx @kunihiros/google-patents-mcp
+npx @softwarestartups/google-patents-mcp
 ```
-
-**Note:** Replace `@kunihiros/google-patents-mcp` with the actual published
-package name if it differs.
 
 The server will start and listen for MCP requests on standard input/output.
 
@@ -64,7 +63,7 @@ following ways:
          "command": "npx",
          "args": [
            "-y",
-           "@kunihiros/google-patents-mcp"
+           "@softwarestartups/google-patents-mcp"
          ],
          "env": {
            "SERPAPI_API_KEY": "YOUR_ACTUAL_SERPAPI_KEY"
@@ -208,7 +207,7 @@ follows the SerpApi response format.
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/KunihiroS/google-patents-mcp.git
+   git clone https://github.com/SoftwareStartups/google-patents-mcp.git
    cd google-patents-mcp
    ```
 
