@@ -204,10 +204,13 @@ class IntegrationTest {
     }
 
     const contentSchema = getPatentContentTool.inputSchema as {
-      properties?: { patent_url?: unknown; patent_id?: unknown };
+      properties?: { patent_url?: unknown; patent_id?: unknown; include?: unknown };
     };
     if (!contentSchema.properties?.patent_url || !contentSchema.properties?.patent_id) {
       throw new Error('get_patent_content tool missing patent_url or patent_id parameters');
+    }
+    if (!contentSchema.properties?.include) {
+      throw new Error('get_patent_content tool missing include parameter');
     }
 
     this.log(`  Found ${response.tools.length} tool(s)`, colors.cyan);

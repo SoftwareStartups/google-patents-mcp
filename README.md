@@ -141,32 +141,30 @@ Searches Google Patents via SerpApi. Returns patent metadata only (no full text)
 
 ### `get_patent_content`
 
-Fetches full patent content (claims, description) from Google Patents by URL or ID. Supports selective content retrieval through optional flags.
+Fetches full patent content (claims, description) from Google Patents by URL or ID. Supports selective content retrieval through the include parameter.
 
 **Parameters:**
 
-| Parameter             | Type    | Required | Description                                           |
-|-----------------------|---------|----------|-------------------------------------------------------|
-| `patent_url`          | string  | No*      | Full Google Patents URL (from search results)         |
-| `patent_id`           | string  | No*      | Patent ID (e.g., 'US1234567A')                        |
-| `include_claims`      | boolean | No       | Include patent claims in response (default: true)     |
-| `include_description` | boolean | No       | Include patent description in response (default: true)|
-| `include_full_text`   | boolean | No       | Include combined full text in response (default: true)|
-| `max_length`          | integer | No       | Maximum character length for returned content. Content will be truncated at natural boundaries (paragraph ends, complete claims). If omitted, no limit is applied. |
+| Parameter    | Type    | Required | Description                                           |
+|--------------|---------|----------|-------------------------------------------------------|
+| `patent_url` | string  | No*      | Full Google Patents URL (from search results)         |
+| `patent_id`  | string  | No*      | Patent ID (e.g., 'US1234567A')                        |
+| `include`    | array   | No       | Array of content sections to include. Valid values (case-insensitive): "claims", "description", "full_text". Defaults to ["description"]. |
+| `max_length` | integer | No       | Maximum character length for returned content. Content will be truncated at natural boundaries (paragraph ends, complete claims). If omitted, no limit is applied. |
 
 *At least one parameter (`patent_url` or `patent_id`) must be provided. If both are provided, `patent_url` takes precedence.
 
 **Returns:** JSON object with requested fields:
 
-* `claims` (string[]): Array of patent claims (if `include_claims` is true)
-* `description` (string): Patent description text (if `include_description` is true)
-* `full_text` (string): Combined claims and description (if `include_full_text` is true)
+* `claims` (string[]): Array of patent claims (if "claims" is in include array)
+* `description` (string): Patent description text (if "description" is in include array)
+* `full_text` (string): Combined claims and description (if "full_text" is in include array)
 
-Fields are omitted from the response if their corresponding flag is set to false or if the content could not be retrieved.
+Fields are omitted from the response if they are not requested in the include array or if the content could not be retrieved.
 
 **Examples:**
 
-Fetch all content (default):
+Fetch description only (default):
 
 ```json
 {
@@ -195,23 +193,31 @@ Fetch only claims:
   "name": "get_patent_content",
   "arguments": {
     "patent_id": "US7654321B2",
-    "include_claims": true,
-    "include_description": false,
-    "include_full_text": false
+    "include": ["claims"]
   }
 }
 ```
 
-Fetch description and full text without separate claims:
+Fetch description and claims:
 
 ```json
 {
   "name": "get_patent_content",
   "arguments": {
     "patent_url": "https://patents.google.com/patent/US7654321B2",
-    "include_claims": false,
-    "include_description": true,
-    "include_full_text": true
+    "include": ["description", "claims"]
+  }
+}
+```
+
+Fetch all content sections:
+
+```json
+{
+  "name": "get_patent_content",
+  "arguments": {
+    "patent_url": "https://patents.google.com/patent/US7654321B2",
+    "include": ["claims", "description", "full_text"]
   }
 }
 ```
@@ -235,9 +241,7 @@ Fetch only claims with length limit:
   "name": "get_patent_content",
   "arguments": {
     "patent_url": "https://patents.google.com/patent/US7654321B2",
-    "include_claims": true,
-    "include_description": false,
-    "include_full_text": false,
+    "include": ["claims"],
     "max_length": 2000
   }
 }

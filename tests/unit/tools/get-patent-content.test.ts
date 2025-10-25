@@ -26,7 +26,7 @@ describe('get_patent_content Tool', () => {
     expect(tool.definition.inputSchema.properties).toHaveProperty('patent_id');
   });
 
-  it('should call patentContentService.fetchContent with patent_url', async () => {
+  it('should call patentContentService.fetchContent with patent_url and default include', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -35,9 +35,7 @@ describe('get_patent_content Tool', () => {
     };
 
     const mockContent = {
-      claims: ['Claim 1', 'Claim 2'],
       description: 'Test description',
-      full_text: 'Full patent text',
     };
 
     const mockPatentContentService = {
@@ -57,9 +55,9 @@ describe('get_patent_content Tool', () => {
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
+      false,
       true,
-      true,
-      true,
+      false,
       undefined
     );
     expect(result.content).toHaveLength(1);
@@ -68,7 +66,7 @@ describe('get_patent_content Tool', () => {
     expect(JSON.parse(text)).toEqual(mockContent);
   });
 
-  it('should call patentContentService.fetchContent with patent_id', async () => {
+  it('should call patentContentService.fetchContent with patent_id and default include', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -77,9 +75,7 @@ describe('get_patent_content Tool', () => {
     };
 
     const mockContent = {
-      claims: ['Claim 1'],
       description: 'Test description',
-      full_text: 'Full text',
     };
 
     const mockPatentContentService = {
@@ -99,9 +95,9 @@ describe('get_patent_content Tool', () => {
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
       'US1234567A',
+      false,
       true,
-      true,
-      true,
+      false,
       undefined
     );
     expect(result.content[0].type).toBe('text');
@@ -139,9 +135,9 @@ describe('get_patent_content Tool', () => {
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
+      false,
       true,
-      true,
-      true,
+      false,
       undefined
     );
   });
@@ -235,7 +231,7 @@ describe('get_patent_content Tool', () => {
     expect(parsedContent).toEqual({});
   });
 
-  it('should pass include flags to service with defaults', async () => {
+  it('should use description as default when include not provided', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -244,9 +240,7 @@ describe('get_patent_content Tool', () => {
     };
 
     const mockContent = {
-      claims: ['Claim 1'],
       description: 'Test description',
-      full_text: 'Full text',
     };
 
     const mockPatentContentService = {
@@ -264,14 +258,14 @@ describe('get_patent_content Tool', () => {
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
+      false,
       true,
-      true,
-      true,
+      false,
       undefined
     );
   });
 
-  it('should pass include flags to service when specified', async () => {
+  it('should include only claims when specified', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -294,9 +288,7 @@ describe('get_patent_content Tool', () => {
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
-      include_claims: true,
-      include_description: false,
-      include_full_text: false,
+      include: ['claims'],
     });
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
@@ -308,7 +300,7 @@ describe('get_patent_content Tool', () => {
     );
   });
 
-  it('should return only requested content based on flags', async () => {
+  it('should return only requested content based on include array', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -331,9 +323,7 @@ describe('get_patent_content Tool', () => {
 
     const result = await tool.handler({
       patent_id: 'US1234567A',
-      include_claims: false,
-      include_description: true,
-      include_full_text: false,
+      include: ['description'],
     });
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
@@ -383,14 +373,14 @@ describe('get_patent_content Tool', () => {
 
     expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
+      false,
       true,
-      true,
-      true,
+      false,
       1000
     );
   });
 
-  it('should handle max_length with selective content flags', async () => {
+  it('should handle max_length with selective content sections', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -413,9 +403,7 @@ describe('get_patent_content Tool', () => {
 
     await tool.handler({
       patent_id: 'US1234567A',
-      include_claims: true,
-      include_description: false,
-      include_full_text: false,
+      include: ['claims'],
       max_length: 500,
     });
 
@@ -452,15 +440,161 @@ describe('get_patent_content Tool', () => {
 
     const result = await tool.handler({
       patent_id: 'US1234567A',
-      include_description: true,
-      include_claims: false,
-      include_full_text: false,
+      include: ['description'],
       max_length: 100,
     });
 
     const text = result.content[0].text as string;
     const parsedContent = JSON.parse(text) as { description?: string };
     expect(parsedContent.description).toContain('[Content truncated');
+  });
+
+  it('should handle empty include array by defaulting to description', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      description: 'Test description',
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_url: 'https://patents.google.com/patent/US1234567',
+      include: [],
+    });
+
+    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+      'https://patents.google.com/patent/US1234567',
+      false,
+      true,
+      false,
+      undefined
+    );
+  });
+
+  it('should handle case-insensitive include values', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      claims: ['Claim 1'],
+      description: 'Test description',
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_url: 'https://patents.google.com/patent/US1234567',
+      include: ['CLAIMS', 'Description'],
+    });
+
+    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+      'https://patents.google.com/patent/US1234567',
+      true,
+      true,
+      false,
+      undefined
+    );
+  });
+
+  it('should throw error for invalid include value', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn(),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await expect(
+      tool.handler({
+        patent_url: 'https://patents.google.com/patent/US1234567',
+        include: ['invalid_section'],
+      })
+    ).rejects.toThrow();
+
+    try {
+      await tool.handler({
+        patent_url: 'https://patents.google.com/patent/US1234567',
+        include: ['invalid_section'],
+      });
+    } catch (error) {
+      expect(error).toHaveProperty('code', ErrorCode.InvalidParams);
+      expect(error).toHaveProperty('message');
+      const errorMessage = (error as { message: string }).message;
+      expect(errorMessage).toContain('Invalid include value');
+      expect(errorMessage).toContain('invalid_section');
+    }
+
+    expect(mockPatentContentService.fetchContent).not.toHaveBeenCalled();
+  });
+
+  it('should handle multiple include sections', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockContent = {
+      claims: ['Claim 1'],
+      description: 'Test description',
+      full_text: 'Full text',
+    };
+
+    const mockPatentContentService = {
+      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    };
+
+    const tool = createGetPatentContentTool(
+      mockPatentContentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_url: 'https://patents.google.com/patent/US1234567',
+      include: ['claims', 'description', 'full_text'],
+    });
+
+    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+      'https://patents.google.com/patent/US1234567',
+      true,
+      true,
+      true,
+      undefined
+    );
   });
 });
 

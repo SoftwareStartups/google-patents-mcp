@@ -14,12 +14,12 @@ export interface SearchPatentsArgs {
   scholar?: boolean;
 }
 
+export type PatentContentSection = 'claims' | 'description' | 'full_text';
+
 export interface GetPatentContentArgs {
   patent_url?: string;
   patent_id?: string;
-  include_claims?: boolean;
-  include_description?: boolean;
-  include_full_text?: boolean;
+  include?: string[];
   max_length?: number;
 }
 

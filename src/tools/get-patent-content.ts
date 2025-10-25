@@ -12,7 +12,7 @@ import type { ToolDefinition } from './types.js';
 export const getPatentContentToolDefinition: Tool = {
   name: 'get_patent_content',
   description:
-    'Fetches full patent content including claims and description from Google Patents. Accepts either a patent URL (from search results) or a patent ID. Returns parsed patent text with selective content control via optional flags.',
+    'Fetches full patent content including claims and description from Google Patents. Accepts either a patent URL (from search results) or a patent ID. Returns parsed patent text with selective content control via the include parameter.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -26,20 +26,13 @@ export const getPatentContentToolDefinition: Tool = {
         description:
           'Patent ID (e.g., "US1234567A" or "patent/US1234567A/en"). Will be converted to a Google Patents URL.',
       },
-      include_claims: {
-        type: 'boolean',
+      include: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
         description:
-          'Whether to include patent claims in the response. Defaults to true.',
-      },
-      include_description: {
-        type: 'boolean',
-        description:
-          'Whether to include patent description in the response. Defaults to true.',
-      },
-      include_full_text: {
-        type: 'boolean',
-        description:
-          'Whether to include combined full text (description + claims) in the response. Defaults to true.',
+          'Array of content sections to include in response. Valid values (case-insensitive): "claims", "description", "full_text". Defaults to ["description"] if not provided or empty.',
       },
       max_length: {
         type: 'integer',
@@ -72,10 +65,31 @@ export function createGetPatentContentTool(
         // Use patent_url if provided, otherwise use patent_id
         const urlOrId = params.patent_url || params.patent_id || '';
 
-        // Extract flags with defaults
-        const includeClaims = params.include_claims ?? true;
-        const includeDescription = params.include_description ?? true;
-        const includeFullText = params.include_full_text ?? true;
+        // Process include parameter
+        const includeParam = params.include || [];
+        const includeArray =
+          includeParam.length === 0 ? ['description'] : includeParam;
+
+        // Normalize and validate include values
+        const validSections = ['claims', 'description', 'full_text'];
+        const normalizedInclude = includeArray.map((item) =>
+          item.toLowerCase()
+        );
+
+        // Validate all values are valid
+        for (const section of normalizedInclude) {
+          if (!validSections.includes(section)) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              `Invalid include value: "${section}". Valid values are: ${validSections.join(', ')}`
+            );
+          }
+        }
+
+        // Convert to boolean flags
+        const includeClaims = normalizedInclude.includes('claims');
+        const includeDescription = normalizedInclude.includes('description');
+        const includeFullText = normalizedInclude.includes('full_text');
         const maxLength = params.max_length;
 
         const content = await patentContentService.fetchContent(
