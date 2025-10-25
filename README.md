@@ -195,29 +195,83 @@ Returns a JSON object containing the search results from SerpApi. The structure 
 
 ## Development
 
-1.  **Clone the repository (if needed for development):**
+### Setup
+
+1.  **Clone the repository:**
     ```bash
-    # git clone <repository-url>
-    # cd google-patents-mcp
+    git clone https://github.com/KunihiroS/google-patents-mcp.git
+    cd google-patents-mcp
     ```
+
 2.  **Install dependencies:**
     ```bash
-    npm install
+    make install
+    # or: npm install
     ```
-3.  **Create `.env` file:**
-    Copy `.env.example` to `.env` and add your `SERPAPI_API_KEY`.
-4.  **Build:**
+
+3.  **Set up environment variables:**
     ```bash
-    npm run build
+    export SERPAPI_API_KEY="your_api_key_here"
     ```
-5.  **Run locally:**
-    ```bash
-    npm start
-    ```
-    Or for development with auto-rebuild:
-    ```bash
-    npm run dev
-    ```
+
+### Development Workflow
+
+**Build the project:**
+```bash
+make build
+# or: npm run build
+```
+
+**Format code:**
+```bash
+make format
+# or: npm run format
+```
+
+**Check code quality (lint + typecheck):**
+```bash
+make check
+# or: npm run lint && npm run typecheck
+```
+
+**Run tests:**
+```bash
+make test
+# or: npm test
+```
+
+**Clean build artifacts:**
+```bash
+make clean
+```
+
+**Full build pipeline:**
+```bash
+make all
+# Runs: clean → install → build → check → test
+```
+
+### Run Locally
+
+**Production mode:**
+```bash
+npm start
+```
+
+**Development mode (with auto-rebuild):**
+```bash
+npm run dev
+```
+
+### Code Quality Standards
+
+This project uses:
+- **ESLint** for code linting with TypeScript-aware rules
+- **Prettier** for code formatting
+- **TypeScript** strict mode for type safety
+- No `any` types allowed (enforced by ESLint)
+
+Run `make check` before committing to ensure code quality.
 
 ## Testing
 

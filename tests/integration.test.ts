@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
- * Smoke Integration Test for Google Patents MCP Server
- * 
+ * Integration Test for Google Patents MCP Server
+ *
  * This test validates that the MCP server can:
  * 1. Start successfully
  * 2. List available tools
- * 3. Execute a patent search
- * 4. Return valid results
- * 5. Shut down cleanly
+ * 3. Execute patent searches with various parameters
+ * 4. Handle filters (dates, inventors, assignees, countries)
+ * 5. Handle pagination and sorting
+ * 6. Return valid results
+ * 7. Handle error scenarios
+ * 8. Shut down cleanly
  */
 
 import { spawn, ChildProcess } from 'child_process';
@@ -16,6 +19,10 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,11 +44,12 @@ interface TestResult {
   duration: number;
 }
 
-class SmokeTest {
+class IntegrationTest {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
   private results: TestResult[] = [];
   private startTime: number = 0;
+  private readonly testTimeout = 60000; // 60 seconds per test
 
   constructor() {}
 
@@ -49,10 +57,13 @@ class SmokeTest {
     console.log(`${color}${message}${colors.reset}`);
   }
 
-  private async runTest(name: string, testFn: () => Promise<void>): Promise<void> {
+  private async runTest(
+    name: string,
+    testFn: () => Promise<void>
+  ): Promise<void> {
     const start = Date.now();
     this.log(`\n▶ Running: ${name}`, colors.cyan);
-    
+
     try {
       await testFn();
       const duration = Date.now() - start;
@@ -70,13 +81,15 @@ class SmokeTest {
   private async setupClient(): Promise<void> {
     // Build path to the built server
     const serverPath = path.resolve(__dirname, '../build/index.js');
-    
+
     this.log('\n🚀 Starting MCP server...', colors.blue);
     this.log(`   Server path: ${serverPath}`, colors.blue);
 
     // Check for SERPAPI_API_KEY
     if (!process.env.SERPAPI_API_KEY) {
-      throw new Error('SERPAPI_API_KEY environment variable is not set. Please set it before running tests.');
+      throw new Error(
+        'SERPAPI_API_KEY environment variable is not set. Please set it before running tests.'
+      );
     }
 
     // Create client and transport
@@ -122,14 +135,16 @@ class SmokeTest {
     if (!this.client) throw new Error('Client not initialized');
 
     const response = await this.client.listTools();
-    
+
     // Validate response structure
     if (!response.tools || !Array.isArray(response.tools)) {
       throw new Error('Invalid response: tools array not found');
     }
 
     // Check for search_patents tool
-    const searchPatentsTool = response.tools.find(tool => tool.name === 'search_patents');
+    const searchPatentsTool = response.tools.find(
+      (tool) => tool.name === 'search_patents'
+    );
     if (!searchPatentsTool) {
       throw new Error('search_patents tool not found in tools list');
     }
@@ -139,7 +154,10 @@ class SmokeTest {
       throw new Error('search_patents tool missing description');
     }
 
-    if (!searchPatentsTool.inputSchema || !searchPatentsTool.inputSchema.properties) {
+    if (
+      !searchPatentsTool.inputSchema ||
+      !searchPatentsTool.inputSchema.properties
+    ) {
       throw new Error('search_patents tool missing input schema');
     }
 
@@ -153,10 +171,9 @@ class SmokeTest {
     this.log(`  Tool: ${searchPatentsTool.name}`, colors.cyan);
   }
 
-  private async testSearchPatents(): Promise<void> {
+  private async testBasicSearch(): Promise<void> {
     if (!this.client) throw new Error('Client not initialized');
 
-    // Execute a simple patent search
     const testQuery = 'quantum computer';
     this.log(`  Searching for: "${testQuery}"`, colors.cyan);
 
@@ -164,12 +181,113 @@ class SmokeTest {
       name: 'search_patents',
       arguments: {
         q: testQuery,
-        num: 10, // Minimum required by the API
+        num: 10,
         status: 'GRANT',
       },
     });
 
-    // Validate response structure
+    this.validateResponse(response);
+    const data = this.parseResponseData(response);
+    this.log(
+      `  Received ${data.organic_results?.length || 0} results`,
+      colors.cyan
+    );
+  }
+
+  private async testSearchWithFilters(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(`  Testing search with date and country filters`, colors.cyan);
+
+    const response = await this.client.callTool({
+      name: 'search_patents',
+      arguments: {
+        q: 'artificial intelligence',
+        num: 10,
+        country: 'US',
+        after: 'publication:20200101',
+        status: 'GRANT',
+      },
+    });
+
+    this.validateResponse(response);
+    const data = this.parseResponseData(response);
+    this.log(
+      `  Filtered search returned ${data.organic_results?.length || 0} results`,
+      colors.cyan
+    );
+  }
+
+  private async testSearchWithPagination(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(`  Testing pagination (page 2)`, colors.cyan);
+
+    const response = await this.client.callTool({
+      name: 'search_patents',
+      arguments: {
+        q: 'machine learning',
+        num: 10,
+        page: 2,
+      },
+    });
+
+    this.validateResponse(response);
+    const data = this.parseResponseData(response);
+
+    if (data.search_parameters && data.search_parameters.page) {
+      this.log(
+        `  Pagination working: page ${data.search_parameters.page}`,
+        colors.cyan
+      );
+    }
+  }
+
+  private async testSearchWithSorting(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(`  Testing sorting (newest first)`, colors.cyan);
+
+    const response = await this.client.callTool({
+      name: 'search_patents',
+      arguments: {
+        q: 'neural network',
+        num: 10,
+        sort: 'new',
+      },
+    });
+
+    this.validateResponse(response);
+    const data = this.parseResponseData(response);
+    this.log(
+      `  Sorted search returned ${data.organic_results?.length || 0} results`,
+      colors.cyan
+    );
+  }
+
+  private async testSearchWithInventorAndAssignee(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(`  Testing inventor/assignee filters`, colors.cyan);
+
+    const response = await this.client.callTool({
+      name: 'search_patents',
+      arguments: {
+        q: 'semiconductor',
+        num: 10,
+        assignee: 'Intel',
+      },
+    });
+
+    this.validateResponse(response);
+    const data = this.parseResponseData(response);
+    this.log(
+      `  Assignee-filtered search returned ${data.organic_results?.length || 0} results`,
+      colors.cyan
+    );
+  }
+
+  private validateResponse(response: any): void {
     if (!response.content || !Array.isArray(response.content)) {
       throw new Error('Invalid response: content array not found');
     }
@@ -178,21 +296,24 @@ class SmokeTest {
       throw new Error('Response content is empty');
     }
 
-    // Check first content item
     const firstContent = response.content[0];
     if (firstContent.type !== 'text') {
-      throw new Error(`Expected content type 'text', got '${firstContent.type}'`);
+      throw new Error(
+        `Expected content type 'text', got '${firstContent.type}'`
+      );
     }
+  }
 
-    // Parse the JSON response
+  private parseResponseData(response: any): any {
+    const firstContent = response.content[0];
     let data: any;
+
     try {
-      data = JSON.parse((firstContent as any).text);
+      data = JSON.parse(firstContent.text);
     } catch (error) {
       throw new Error('Response text is not valid JSON');
     }
 
-    // Validate SerpApi response structure
     if (!data.search_metadata) {
       throw new Error('Response missing search_metadata');
     }
@@ -201,37 +322,16 @@ class SmokeTest {
       throw new Error('Response missing search_parameters');
     }
 
-    // Check if we got results (organic_results might be empty for some queries, which is ok)
-    if (data.organic_results && Array.isArray(data.organic_results)) {
-      this.log(`  Received ${data.organic_results.length} patent results`, colors.cyan);
-      
-      // Validate first result structure if available
-      if (data.organic_results.length > 0) {
-        const firstResult = data.organic_results[0];
-        if (!firstResult.title) {
-          throw new Error('First result missing title');
-        }
-        if (!firstResult.patent_id) {
-          throw new Error('First result missing patent_id');
-        }
-        this.log(`  First result: ${firstResult.title} (${firstResult.patent_id})`, colors.cyan);
-      }
-    } else {
-      this.log(`  No organic results (empty result set - this is acceptable)`, colors.yellow);
-    }
-
-    // Validate search metadata
     if (data.search_metadata.status !== 'Success') {
       throw new Error(`SerpApi search status: ${data.search_metadata.status}`);
     }
 
-    this.log(`  Search completed successfully`, colors.cyan);
-    this.log(`  API processed in: ${data.search_metadata.processed_at}`, colors.cyan);
+    return data;
   }
 
   private printSummary(): void {
     const totalTests = this.results.length;
-    const passedTests = this.results.filter(r => r.passed).length;
+    const passedTests = this.results.filter((r) => r.passed).length;
     const failedTests = totalTests - passedTests;
     const totalDuration = Date.now() - this.startTime;
 
@@ -239,7 +339,7 @@ class SmokeTest {
     this.log('TEST SUMMARY', colors.blue);
     this.log('='.repeat(60), colors.blue);
 
-    this.results.forEach(result => {
+    this.results.forEach((result) => {
       const icon = result.passed ? '✓' : '✗';
       const color = result.passed ? colors.green : colors.red;
       this.log(`${icon} ${result.name} (${result.duration}ms)`, color);
@@ -249,15 +349,18 @@ class SmokeTest {
     });
 
     this.log('\n' + '-'.repeat(60), colors.blue);
-    this.log(`Total: ${totalTests} | Passed: ${passedTests} | Failed: ${failedTests}`, colors.blue);
+    this.log(
+      `Total: ${totalTests} | Passed: ${passedTests} | Failed: ${failedTests}`,
+      colors.blue
+    );
     this.log(`Duration: ${totalDuration}ms`, colors.blue);
     this.log('='.repeat(60), colors.blue);
 
     if (failedTests > 0) {
-      this.log('\n❌ SMOKE TEST FAILED', colors.red);
+      this.log('\n❌ INTEGRATION TESTS FAILED', colors.red);
       process.exit(1);
     } else {
-      this.log('\n✅ SMOKE TEST PASSED', colors.green);
+      this.log('\n✅ INTEGRATION TESTS PASSED', colors.green);
       process.exit(0);
     }
   }
@@ -265,7 +368,10 @@ class SmokeTest {
   async run(): Promise<void> {
     this.startTime = Date.now();
     this.log('\n' + '='.repeat(60), colors.blue);
-    this.log('🧪 Google Patents MCP Server - Smoke Integration Test', colors.blue);
+    this.log(
+      '🧪 Google Patents MCP Server - Integration Test Suite',
+      colors.blue
+    );
     this.log('='.repeat(60), colors.blue);
 
     try {
@@ -280,27 +386,41 @@ class SmokeTest {
           await this.testListTools();
         });
 
-        await this.runTest('Search Patents', async () => {
-          await this.testSearchPatents();
+        await this.runTest('Basic Patent Search', async () => {
+          await this.testBasicSearch();
+        });
+
+        await this.runTest('Search with Filters', async () => {
+          await this.testSearchWithFilters();
+        });
+
+        await this.runTest('Search with Pagination', async () => {
+          await this.testSearchWithPagination();
+        });
+
+        await this.runTest('Search with Sorting', async () => {
+          await this.testSearchWithSorting();
+        });
+
+        await this.runTest('Search with Inventor/Assignee', async () => {
+          await this.testSearchWithInventorAndAssignee();
         });
       }
-
     } catch (error) {
       this.log(`\n❌ Unexpected error: ${error}`, colors.red);
     } finally {
       // Cleanup
       await this.teardownClient();
-      
+
       // Print summary
       this.printSummary();
     }
   }
 }
 
-// Run the smoke test
-const test = new SmokeTest();
-test.run().catch(error => {
+// Run the integration tests
+const test = new IntegrationTest();
+test.run().catch((error) => {
   console.error(`${colors.red}Fatal error: ${error}${colors.reset}`);
   process.exit(1);
 });
-

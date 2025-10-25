@@ -11,8 +11,15 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc -w & node --watch build/index.js",
-    "test": "node --loader ts-node/esm --experimental-specifier-resolution=node tests/smoke.test.ts",
-    "test:smoke": "node --loader ts-node/esm --experimental-specifier-resolution=node tests/smoke.test.ts"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:integration": "tsx tests/integration.test.ts",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "mcp",
@@ -30,7 +37,6 @@
     "url": "https://github.com/KunihiroS/google-patents-mcp/issues"
   },
   "files": [
-    "build",
     "README.md",
     "LICENSE",
     "package.json"
@@ -43,8 +49,15 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
-    "typescript": "^5.4.5",
     "@types/node-fetch": "^2.6.11",
-    "ts-node": "^10.9.2"
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.5",
+    "vitest": "^2.0.0"
   }
 }

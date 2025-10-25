@@ -1,0 +1,49 @@
+name: Integration Tests
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
+    workflow_dispatch:
+
+jobs:
+    integration-tests:
+        name: Integration Tests
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [18.x, 20.x, 22.x]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build project
+              run: npm run build
+
+            - name: Run integration tests
+              env:
+                  SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+                  LOG_LEVEL: error
+              run: npm run test:integration
+
+            - name: Upload test logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: integration-test-logs-node-${{ matrix.node-version }}
+                  path: |
+                      *.log
+                      /tmp/google-patents-server.log
+                  if-no-files-found: ignore
