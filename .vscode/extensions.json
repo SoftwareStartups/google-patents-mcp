@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    // Essential
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // TypeScript
+    "usernamehw.errorlens",
+    "yoavbls.pretty-ts-errors",
+
+    // Testing
+    "vitest.explorer",
+
+    // Git
+    "eamodio.gitlens",
+
+    // Utilities
+    "christian-kohler.path-intellisense",
+    "aaron-bond.better-comments",
+    "wayou.vscode-todo-highlight",
+
+    // Markdown
+    "davidanson.vscode-markdownlint",
+
+    // Docker (for Dockerfile)
+    "ms-azuretools.vscode-docker"
+  ]
+}
+
