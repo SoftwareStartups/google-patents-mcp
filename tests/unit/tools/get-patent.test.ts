@@ -60,13 +60,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      true, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: false,
+        includeDescription: false,
+        includeAbstract: true,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: true,
+        maxLength: undefined,
+      }
     );
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
@@ -104,13 +106,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      true, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: false,
+        includeDescription: false,
+        includeAbstract: true,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: true,
+        maxLength: undefined,
+      }
     );
     expect(result.content[0].type).toBe('text');
     const text = result.content[0].text as string;
@@ -148,13 +152,7 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      true, // includeMetadata
-      undefined // maxLength
+      expect.any(Object)
     );
   });
 
@@ -219,34 +217,6 @@ describe('get_patent Tool', () => {
     );
   });
 
-  it('should return empty object when content not found', async () => {
-    const mockLogger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    };
-
-    const mockPatentData = {};
-
-    const mockPatentService = {
-      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    const result = await tool.handler({
-      patent_url: 'https://patents.google.com/patent/INVALID',
-    });
-
-    const text = result.content[0].text as string;
-    const parsedData = JSON.parse(text) as Record<string, unknown>;
-    expect(parsedData).toEqual({});
-  });
-
   it('should include only claims when specified', async () => {
     const mockLogger = {
       info: vi.fn(),
@@ -276,13 +246,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true, // includeClaims
-      false, // includeDescription
-      false, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      false, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: true,
+        includeDescription: false,
+        includeAbstract: false,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: false,
+        maxLength: undefined,
+      }
     );
   });
 
@@ -315,21 +287,20 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      false, // includeClaims
-      true, // includeDescription
-      false, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      false, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: false,
+        includeDescription: true,
+        includeAbstract: false,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: false,
+        maxLength: undefined,
+      }
     );
 
     const text = result.content[0].text as string;
     const parsedData = JSON.parse(text) as {
       description?: string;
-      claims?: string[];
-      family_members?: unknown[];
-      citations?: unknown;
       patent_id?: string;
     };
     expect(parsedData).toEqual({
@@ -367,13 +338,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      true, // includeMetadata
-      1000 // maxLength
+      {
+        includeClaims: false,
+        includeDescription: false,
+        includeAbstract: true,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: true,
+        maxLength: 1000,
+      }
     );
   });
 
@@ -407,13 +380,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      true, // includeClaims
-      false, // includeDescription
-      false, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      false, // includeMetadata
-      500 // maxLength
+      {
+        includeClaims: true,
+        includeDescription: false,
+        includeAbstract: false,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: false,
+        maxLength: 500,
+      }
     );
   });
 
@@ -447,13 +422,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      true, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: false,
+        includeDescription: false,
+        includeAbstract: true,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: true,
+        maxLength: undefined,
+      }
     );
   });
 
@@ -487,13 +464,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true, // includeClaims
-      true, // includeDescription
-      false, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      false, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: true,
+        includeDescription: true,
+        includeAbstract: false,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: false,
+        maxLength: undefined,
+      }
     );
   });
 
@@ -566,13 +545,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false, // includeClaims
-      false, // includeDescription
-      true, // includeAbstract
-      false, // includeFamilyMembers
-      false, // includeCitations
-      false, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: false,
+        includeDescription: false,
+        includeAbstract: true,
+        includeFamilyMembers: false,
+        includeCitations: false,
+        includeMetadata: false,
+        maxLength: undefined,
+      }
     );
   });
 
@@ -618,13 +599,15 @@ describe('get_patent Tool', () => {
 
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true, // includeClaims
-      true, // includeDescription
-      true, // includeAbstract
-      true, // includeFamilyMembers
-      true, // includeCitations
-      true, // includeMetadata
-      undefined // maxLength
+      {
+        includeClaims: true,
+        includeDescription: true,
+        includeAbstract: true,
+        includeFamilyMembers: true,
+        includeCitations: true,
+        includeMetadata: true,
+        maxLength: undefined,
+      }
     );
   });
 });

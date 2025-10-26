@@ -6,8 +6,11 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
 import type { PatentService } from '../services/patent.js';
-import type { GetPatentArgs } from '../types.js';
-import type { ToolDefinition } from './types.js';
+import type {
+  FetchPatentOptions,
+  GetPatentArgs,
+  ToolDefinition,
+} from '../types.js';
 
 export const getPatentToolDefinition: Tool = {
   name: 'get_patent',
@@ -44,6 +47,47 @@ export const getPatentToolDefinition: Tool = {
   },
 };
 
+/**
+ * Converts include array to FetchPatentOptions
+ */
+function parseIncludeOptions(include: string[]): FetchPatentOptions {
+  const normalizedInclude = include.map((item) => item.toLowerCase());
+
+  return {
+    includeClaims: normalizedInclude.includes('claims'),
+    includeDescription: normalizedInclude.includes('description'),
+    includeAbstract: normalizedInclude.includes('abstract'),
+    includeFamilyMembers: normalizedInclude.includes('family_members'),
+    includeCitations: normalizedInclude.includes('citations'),
+    includeMetadata: normalizedInclude.includes('metadata'),
+  };
+}
+
+/**
+ * Validates include parameter values
+ */
+function validateIncludeValues(include: string[]): void {
+  const validSections = [
+    'claims',
+    'description',
+    'abstract',
+    'family_members',
+    'citations',
+    'metadata',
+  ];
+
+  const normalizedInclude = include.map((item) => item.toLowerCase());
+
+  for (const section of normalizedInclude) {
+    if (!validSections.includes(section)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Invalid include value: "${section}". Valid values are: ${validSections.join(', ')}`
+      );
+    }
+  }
+}
+
 export function createGetPatentTool(
   patentService: PatentService,
   logger: winston.Logger
@@ -70,48 +114,18 @@ export function createGetPatentTool(
         const includeArray =
           includeParam.length === 0 ? ['metadata', 'abstract'] : includeParam;
 
-        // Normalize and validate include values
-        const validSections = [
-          'claims',
-          'description',
-          'abstract',
-          'family_members',
-          'citations',
-          'metadata',
-        ];
-        const normalizedInclude = includeArray.map((item) =>
-          item.toLowerCase()
-        );
+        // Validate include values
+        validateIncludeValues(includeArray);
 
-        // Validate all values are valid
-        for (const section of normalizedInclude) {
-          if (!validSections.includes(section)) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              `Invalid include value: "${section}". Valid values are: ${validSections.join(', ')}`
-            );
-          }
-        }
-
-        // Convert to boolean flags
-        const includeClaims = normalizedInclude.includes('claims');
-        const includeDescription = normalizedInclude.includes('description');
-        const includeAbstract = normalizedInclude.includes('abstract');
-        const includeFamilyMembers =
-          normalizedInclude.includes('family_members');
-        const includeCitations = normalizedInclude.includes('citations');
-        const includeMetadata = normalizedInclude.includes('metadata');
-        const maxLength = params.max_length;
+        // Convert to options object
+        const options: FetchPatentOptions = {
+          ...parseIncludeOptions(includeArray),
+          maxLength: params.max_length,
+        };
 
         const patentData = await patentService.fetchPatentData(
           urlOrId,
-          includeClaims,
-          includeDescription,
-          includeAbstract,
-          includeFamilyMembers,
-          includeCitations,
-          includeMetadata,
-          maxLength
+          options
         );
 
         return {

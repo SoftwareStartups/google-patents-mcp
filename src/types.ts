@@ -1,3 +1,4 @@
+/** Search parameters for Google Patents */
 export interface SearchPatentsArgs {
   q?: string;
   page?: number;
@@ -12,6 +13,17 @@ export interface SearchPatentsArgs {
   status?: 'GRANT' | 'APPLICATION';
   type?: 'PATENT' | 'DESIGN';
   scholar?: boolean;
+}
+
+/** Options for fetching patent content */
+export interface FetchPatentOptions {
+  includeClaims?: boolean;
+  includeDescription?: boolean;
+  includeAbstract?: boolean;
+  includeFamilyMembers?: boolean;
+  includeCitations?: boolean;
+  includeMetadata?: boolean;
+  maxLength?: number;
 }
 
 export type PatentContentSection = 'claims' | 'description' | 'full_text';
@@ -121,6 +133,14 @@ export interface GetPatentArgs {
   patent_id?: string;
   include?: string[];
   max_length?: number;
+}
+
+// Tool-related types
+import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
+
+export interface ToolDefinition {
+  definition: Tool;
+  handler: (args: unknown) => Promise<CallToolResult>;
 }
 
 // Re-export SerpApiClient for use in other modules

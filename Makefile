@@ -1,4 +1,4 @@
-.PHONY: help install build clean format format-check lint check test test-unit test-integration test-e2e test-all all
+.PHONY: help install build clean format format-check lint check test test-unit test-e2e test-all all
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -28,14 +28,11 @@ check: ## Run ESLint and TypeScript type checking
 	npm run lint
 	npm run typecheck
 
-test: build ## Run all tests (unit + integration)
+test: build ## Run unit tests
 	npm test
 
-test-unit: ## Run unit tests only
+test-unit: build ## Run unit tests only (includes tool handlers)
 	npm run test:unit
-
-test-integration: build ## Run integration tests only
-	npm run test:integration
 
 test-e2e: build ## Run end-to-end tests with real SerpAPI calls
 	@echo "🚀 Running end-to-end tests with real SerpAPI calls..."
@@ -44,7 +41,7 @@ test-e2e: build ## Run end-to-end tests with real SerpAPI calls
 	npm run test:e2e
 
 test-all: build ## Run all tests including end-to-end tests with real API calls
-	@echo "🧪 Running all tests (unit + integration + e2e)..."
+	@echo "🧪 Running all tests (unit + e2e)..."
 	@echo "📝 Loading SERPAPI_API_KEY from .env file if available"
 	npm run test:all
 

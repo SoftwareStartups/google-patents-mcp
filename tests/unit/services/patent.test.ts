@@ -7,7 +7,7 @@ describe('PatentService', () => {
   });
 
   describe('Patent Data Fetching', () => {
-    it('should fetch patent data with default include (metadata and abstract)', async () => {
+    it('should fetch patent data with default options (metadata and abstract)', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -41,8 +41,8 @@ describe('PatentService', () => {
       );
       expect(result.patent_id).toBe('US1234567');
       expect(result.title).toBe('Test Patent');
-      expect(result.abstract).toBe('Test abstract'); // Abstract is returned by default
-      expect(result.description).toBeUndefined(); // Description is not included by default
+      expect(result.abstract).toBe('Test abstract');
+      expect(result.description).toBeUndefined();
       expect(result.publication_number).toBe('US1234567');
       expect(result.assignee).toBe('Test Company');
       expect(result.inventor).toBe('John Doe');
@@ -76,15 +76,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        true, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        false, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeClaims: true,
+        includeAbstract: false,
+        includeMetadata: false,
+      });
 
       expect(result.claims).toEqual([
         '1. A method for testing.',
@@ -118,23 +114,18 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription
-        true, // includeAbstract
-        false, // includeFamilyMembers
-        false, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeAbstract: true,
+        includeMetadata: false,
+      });
 
       expect(result.abstract).toBe('This is a test abstract for the patent.');
       expect(result.claims).toBeUndefined();
       expect(result.description).toBeUndefined();
-      expect(result.title).toBeUndefined(); // Metadata not included
+      expect(result.title).toBeUndefined();
     });
 
-    it('should extract family members from country_status', async () => {
+    it('should extract family members from worldwide_applications', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -186,15 +177,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        true, // includeFamilyMembers
-        false, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeFamilyMembers: true,
+        includeMetadata: false,
+        includeAbstract: false,
+      });
 
       expect(result.family_members).toEqual([
         { patent_id: 'patent/EP1234567/en', region: 'EP', status: 'Pending' },
@@ -240,15 +227,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        true, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeCitations: true,
+        includeMetadata: false,
+        includeAbstract: false,
+      });
 
       expect(result.citations).toEqual({
         forward_citations: 47,
@@ -278,15 +261,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        true, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeCitations: true,
+        includeMetadata: false,
+        includeAbstract: false,
+      });
 
       expect(result.citations).toBeUndefined();
     });
@@ -312,15 +291,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        true, // includeFamilyMembers
-        false, // includeCitations
-        false // includeMetadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeFamilyMembers: true,
+        includeMetadata: false,
+        includeAbstract: false,
+      });
 
       expect(result.family_members).toEqual([]);
     });
@@ -437,16 +412,11 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      // Test without description to avoid fetch issues in unit tests
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        false, // includeClaims
-        false, // includeDescription - Don't include description
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        false, // includeCitations
-        true // includeMetadata - Include metadata
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeDescription: false,
+        includeMetadata: true,
+        includeAbstract: false,
+      });
 
       expect(result.title).toBe('Test Patent');
       expect(result.publication_number).toBe('US1234567');
@@ -479,16 +449,12 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        true, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        false, // includeCitations
-        false, // includeMetadata
-        100 // maxLength
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeClaims: true,
+        includeMetadata: false,
+        includeAbstract: false,
+        maxLength: 100,
+      });
 
       expect(result.claims).toBeDefined();
       expect(result.claims!.length).toBeLessThanOrEqual(4);
@@ -517,16 +483,12 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData(
-        'patent/US1234567/en',
-        true, // includeClaims
-        false, // includeDescription
-        false, // includeAbstract
-        false, // includeFamilyMembers
-        false, // includeCitations
-        false, // includeMetadata
-        1000 // maxLength
-      );
+      const result = await service.fetchPatentData('patent/US1234567/en', {
+        includeClaims: true,
+        includeMetadata: false,
+        includeAbstract: false,
+        maxLength: 1000,
+      });
 
       expect(result.claims).toBeDefined();
       expect(result.claims).toContain('Short text.');

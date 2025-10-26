@@ -25,7 +25,6 @@ export default defineConfig({
       ],
     },
     include: ['tests/unit/**/*.test.ts'],
-    exclude: ['tests/integration.test.ts'],
+    exclude: ['tests/e2e-real-api.test.ts'],
   },
 });
-
