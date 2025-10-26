@@ -5,6 +5,8 @@
  * They can be skipped in CI by excluding the e2e test file.
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -37,6 +39,10 @@ describe('E2E Tests - MCP Server with Real SerpAPI', () => {
         'SERPAPI_API_KEY environment variable is required for E2E tests'
       );
     }
+
+    // Ensure we're using the real SerpAPI, not a mock server
+    // Clear SERPAPI_BASE_URL if it was set by integration tests
+    delete process.env.SERPAPI_BASE_URL;
 
     const testClient = await createMcpTestClient();
     client = testClient.client;

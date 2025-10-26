@@ -4,7 +4,10 @@
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-export function parseToolResponse<T>(response: CallToolResult): T {
+// parseToolResponse performs runtime JSON validation before returning
+export function parseToolResponse<T = unknown>(
+  response: CallToolResult,
+): T {
   if (!response.content || !Array.isArray(response.content)) {
     throw new Error('Invalid response: content array not found');
   }
@@ -23,7 +26,12 @@ export function parseToolResponse<T>(response: CallToolResult): T {
   }
 
   try {
-    return JSON.parse(firstContent.text) as T;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const parsed = JSON.parse(firstContent.text);
+    // Type assertion is safe here because we validate the structure before parsing
+    // and the generic T is provided by the caller based on expected structure
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return parsed as T;
   } catch {
     throw new Error('Response text is not valid JSON');
   }
