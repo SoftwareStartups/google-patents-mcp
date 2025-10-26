@@ -11,7 +11,7 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc -w & node --watch build/index.js",
-    "test": "npm run test:unit",
+    "test": "npm run test:unit && npm run test:integration",
     "test:unit": "vitest run --workspace vitest.workspace.ts --project unit",
     "test:unit:watch": "vitest --workspace vitest.workspace.ts --project unit",
     "test:integration": "vitest run --workspace vitest.workspace.ts --project integration",

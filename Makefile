@@ -28,7 +28,7 @@ check: ## Run ESLint and TypeScript type checking
 	npm run lint
 	npm run typecheck
 
-test: build ## Run unit tests
+test: build ## Run unit and integration tests (excluding e2e)
 	npm test
 
 test-unit: build ## Run unit tests only (includes tool handlers)
@@ -48,7 +48,7 @@ test-all: build ## Run all tests including end-to-end tests with real API calls
 	@echo "📝 Loading SERPAPI_API_KEY from .env file if available"
 	npm run test:all
 
-ci: clean install format-check check build test-unit ## Run full CI pipeline locally
+ci: clean install format-check check build test ## Run full CI pipeline locally
 
 all: clean install build check test ## Run full build pipeline
 
