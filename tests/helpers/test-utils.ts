@@ -5,9 +5,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 // parseToolResponse performs runtime JSON validation before returning
-export function parseToolResponse<T = unknown>(
-  response: CallToolResult,
-): T {
+export function parseToolResponse<T = unknown>(response: CallToolResult): T {
   if (!response.content || !Array.isArray(response.content)) {
     throw new Error('Invalid response: content array not found');
   }
