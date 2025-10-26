@@ -12,11 +12,11 @@
     "start": "node build/index.js",
     "dev": "tsc -w & node --watch build/index.js",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run --workspace vitest.workspace.ts --project unit",
-    "test:unit:watch": "vitest --workspace vitest.workspace.ts --project unit",
-    "test:integration": "vitest run --workspace vitest.workspace.ts --project integration",
-    "test:e2e": "vitest run --workspace vitest.workspace.ts --project e2e",
-    "test:all": "vitest run --workspace vitest.workspace.ts",
+    "test:unit": "vitest run --project unit",
+    "test:unit:watch": "vitest --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "vitest run --project e2e",
+    "test:all": "vitest run",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "lint": "eslint src tests",
@@ -56,7 +56,7 @@
     "@types/node-fetch": "^2.6.11",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
+    "@vitest/coverage-v8": "^4.0.3",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "express": "^5.1.0",
@@ -64,6 +64,6 @@
     "prettier": "^3.2.5",
     "tsx": "^4.7.1",
     "typescript": "^5.4.5",
-    "vitest": "^2.0.0"
+    "vitest": "^4.0.3"
   }
 }
