@@ -7,7 +7,7 @@ describe('PatentContentService', () => {
   });
 
   describe('HTML Parsing', () => {
-    it('should extract claims from patent HTML', async () => {
+    it('should extract claims from patent HTML (old format with itemprop)', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -40,6 +40,53 @@ describe('PatentContentService', () => {
 
       const result = await service.fetchContent(
         'https://patents.google.com/patent/US1234567'
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.claims).toHaveLength(2);
+      expect(result.claims?.[0]).toContain('1. A method for testing');
+      expect(result.claims?.[1]).toContain('2. The method of claim 1');
+    });
+
+    it('should extract claims from patent HTML (new format with class="claim")', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="claims">
+            <div class="claim"> <div num="1" class="claim">
+              <div class="claim-text">A method for testing comprising...</div>
+            </div>
+            </div>
+            <div class="claim-dependent"> <div num="2" class="claim">
+              <div class="claim-text">The method of claim 1, wherein...</div>
+            </div>
+            </div>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/FI20236452A1'
       );
 
       expect(result.claims).toBeDefined();

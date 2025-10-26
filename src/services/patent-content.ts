@@ -53,18 +53,38 @@ export class PatentContentService {
         );
         if (claimsMatch) {
           const claimsHtml = claimsMatch[1];
-          // Extract individual claims marked with itemprop="claim"
-          const claimMatches = claimsHtml.matchAll(
-            /<div[^>]*itemprop="claim"[^>]*[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
-          );
           const claims: string[] = [];
-          for (const match of claimMatches) {
-            const claimNum = match[1];
-            const claimText = this.cleanHtmlText(match[2]);
+
+          // Try newer format: div with both num and class="claim" attributes
+          // Match divs that have both attributes in any order
+          const claimMatchesNew = claimsHtml.matchAll(
+            /<div\s+([^>]*\bnum="(\d+)"[^>]*\bclass="claim"|[^>]*\bclass="claim"[^>]*\bnum="(\d+)")[^>]*>([\s\S]*?)<\/div>/gi
+          );
+          for (const match of claimMatchesNew) {
+            // Claim number can be in capture group 2 or 3 depending on attribute order
+            const claimNum = (match[2] || match[3]).replace(/^0+/, '') || '1'; // Remove leading zeros
+            const claimText = this.cleanHtmlText(match[4]);
             if (claimText) {
-              claims.push(`${claimNum}. ${claimText}`);
+              // Check if claim text already starts with the number to avoid duplication
+              const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(claimText);
+              claims.push(startsWithNum ? claimText : `${claimNum}. ${claimText}`);
             }
           }
+
+          // Fallback to older format: itemprop="claim" with num attribute
+          if (claims.length === 0) {
+            const claimMatchesOld = claimsHtml.matchAll(
+              /<div[^>]*itemprop="claim"[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
+            );
+            for (const match of claimMatchesOld) {
+              const claimNum = match[1];
+              const claimText = this.cleanHtmlText(match[2]);
+              if (claimText) {
+                claims.push(`${claimNum}. ${claimText}`);
+              }
+            }
+          }
+
           if (claims.length > 0) {
             parsedClaims = claims;
           }
