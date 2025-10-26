@@ -7,6 +7,59 @@ describe('PatentContentService', () => {
   });
 
   describe('HTML Parsing', () => {
+    it('should extract claims from patent HTML (new format with claim tags)', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockHtml = `
+        <html>
+          <section itemprop="claims" itemscope>
+            <h2>Claims</h2>
+            <claim id="clm-0001" num="1">
+              <div class="claim-text">A system for meteorological modelling, the system comprising global navigation satellite system comprising:</div>
+              <div class="claim-text">- a space segment having navigation satellites (2),</div>
+              <div class="claim-text">- a control segment having ground-based satellite stations (4, 6, 8), and</div>
+            </claim>
+            <claim id="clm-0002" num="2">
+              <div class="claim-text">A system according to claim 1, characterized in that the client node (300) and the infrastructure network node (100) are supported to a structure of the infrastructure network station.</div>
+            </claim>
+          </section>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => await Promise.resolve(mockHtml),
+      });
+
+      vi.doMock('node-fetch', () => ({
+        default: mockFetch,
+      }));
+
+      const { PatentContentService } = await import(
+        '../../../src/services/patent-content.js'
+      );
+      const service = new PatentContentService(mockLogger as never);
+
+      const result = await service.fetchContent(
+        'https://patents.google.com/patent/WO2025141247A1',
+        true,  // includeClaims
+        false, // includeDescription
+        false, // includeFullText
+        5000   // maxLength
+      );
+
+      expect(result.claims).toBeDefined();
+      expect(result.claims).toHaveLength(2);
+      expect(result.claims?.[0]).toContain('1. A system for meteorological modelling');
+      expect(result.claims?.[0]).toContain('space segment having navigation satellites');
+      expect(result.claims?.[1]).toContain('2. A system according to claim 1');
+    });
+
     it('should extract claims from patent HTML (old format with itemprop)', async () => {
       const mockLogger = {
         info: vi.fn(),

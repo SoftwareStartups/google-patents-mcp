@@ -55,32 +55,62 @@ export class PatentContentService {
           const claimsHtml = claimsMatch[1];
           const claims: string[] = [];
 
-          // Try newer format: div with both num and class="claim" attributes
-          // Match divs that have both attributes in any order
+          // Try newer format: <claim> tags with num attribute and <div class="claim-text"> content
           const claimMatchesNew = claimsHtml.matchAll(
-            /<div\s+([^>]*\bnum="(\d+)"[^>]*\bclass="claim"|[^>]*\bclass="claim"[^>]*\bnum="(\d+)")[^>]*>([\s\S]*?)<\/div>/gi
+            /<claim[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/claim>/gi
           );
           for (const match of claimMatchesNew) {
-            // Claim number can be in capture group 2 or 3 depending on attribute order
-            const claimNum = (match[2] || match[3]).replace(/^0+/, '') || '1'; // Remove leading zeros
-            const claimText = this.cleanHtmlText(match[4]);
-            if (claimText) {
+            const claimNum = match[1].replace(/^0+/, '') || '1'; // Remove leading zeros
+            const claimContent = match[2];
+
+            // Extract text from all <div class="claim-text"> elements within this claim
+            const claimTextDivs = claimContent.matchAll(
+              /<div[^>]*class="claim-text"[^>]*>([\s\S]*?)<\/div>/gi
+            );
+
+            const claimTextParts: string[] = [];
+            for (const textMatch of claimTextDivs) {
+              const cleanText = this.cleanHtmlText(textMatch[1]);
+              if (cleanText) {
+                claimTextParts.push(cleanText);
+              }
+            }
+
+            if (claimTextParts.length > 0) {
+              const fullClaimText = claimTextParts.join(' ');
               // Check if claim text already starts with the number to avoid duplication
-              const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(
-                claimText
-              );
+              const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(fullClaimText);
               claims.push(
-                startsWithNum ? claimText : `${claimNum}. ${claimText}`
+                startsWithNum ? fullClaimText : `${claimNum}. ${fullClaimText}`
               );
             }
           }
 
-          // Fallback to older format: itemprop="claim" with num attribute
+          // Fallback to older format: div with both num and class="claim" attributes
           if (claims.length === 0) {
             const claimMatchesOld = claimsHtml.matchAll(
-              /<div[^>]*itemprop="claim"[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
+              /<div\s+([^>]*\bnum="(\d+)"[^>]*\bclass="claim"|[^>]*\bclass="claim"[^>]*\bnum="(\d+)")[^>]*>([\s\S]*?)<\/div>/gi
             );
             for (const match of claimMatchesOld) {
+              // Claim number can be in capture group 2 or 3 depending on attribute order
+              const claimNum = (match[2] || match[3]).replace(/^0+/, '') || '1'; // Remove leading zeros
+              const claimText = this.cleanHtmlText(match[4]);
+              if (claimText) {
+                // Check if claim text already starts with the number to avoid duplication
+                const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(claimText);
+                claims.push(
+                  startsWithNum ? claimText : `${claimNum}. ${claimText}`
+                );
+              }
+            }
+          }
+
+          // Fallback to even older format: itemprop="claim" with num attribute
+          if (claims.length === 0) {
+            const claimMatchesOlder = claimsHtml.matchAll(
+              /<div[^>]*itemprop="claim"[^>]*num="(\d+)"[^>]*>([\s\S]*?)<\/div>/gi
+            );
+            for (const match of claimMatchesOlder) {
               const claimNum = match[1];
               const claimText = this.cleanHtmlText(match[2]);
               if (claimText) {
