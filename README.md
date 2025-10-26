@@ -300,8 +300,22 @@ console.log(contentResult.claims);
 
 3. **Set up environment variables:**
 
+   Create a `.env` file in the project root. First, create a `.env.example` file with the following content:
+
+   ```dotenv
+   # SerpApi Configuration
+   # Get your API key from https://serpapi.com/
+   SERPAPI_API_KEY=your_serpapi_key_here
+
+   # Optional: Set log level (error, warn, info, http, verbose, debug, silly)
+   # LOG_LEVEL=info
+   ```
+
+   Then copy it to `.env` and edit with your actual API key:
+
    ```bash
-   export SERPAPI_API_KEY="your_api_key_here"
+   cp .env.example .env
+   # Edit .env and replace 'your_serpapi_key_here' with your actual SerpApi key
    ```
 
 ### Development Workflow
@@ -361,17 +375,6 @@ npm start
 npm run dev
 ```
 
-### Code Quality Standards
-
-This project uses:
-
-* **ESLint** for code linting with TypeScript-aware rules
-* **Prettier** for code formatting
-* **TypeScript** strict mode for type safety
-* No `any` types allowed (enforced by ESLint)
-
-Run `make check` before committing to ensure code quality.
-
 ## Testing
 
 The project includes unit tests and integration tests:
@@ -381,8 +384,7 @@ The project includes unit tests and integration tests:
 npm install
 npm run build
 
-# Set your SerpApi API key
-export SERPAPI_API_KEY="your_api_key_here"
+# Set up environment variables (see Development Setup section above)
 
 # Run all tests
 npm test
