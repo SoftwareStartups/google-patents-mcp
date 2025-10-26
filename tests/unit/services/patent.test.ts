@@ -7,7 +7,7 @@ describe('PatentService', () => {
   });
 
   describe('Patent Data Fetching', () => {
-    it('should fetch patent data with default include (metadata and description)', async () => {
+    it('should fetch patent data with default include (metadata and abstract)', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -41,7 +41,8 @@ describe('PatentService', () => {
       );
       expect(result.patent_id).toBe('US1234567');
       expect(result.title).toBe('Test Patent');
-      expect(result.description).toBeUndefined(); // Description not available in SerpAPI response
+      expect(result.abstract).toBe('Test abstract'); // Abstract is returned by default
+      expect(result.description).toBeUndefined(); // Description is not included by default
       expect(result.publication_number).toBe('US1234567');
       expect(result.assignee).toBe('Test Company');
       expect(result.inventor).toBe('John Doe');
@@ -77,11 +78,12 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        true,
-        false,
-        false,
-        false,
-        false
+        true, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        false, // includeCitations
+        false // includeMetadata
       );
 
       expect(result.claims).toEqual([
@@ -89,8 +91,47 @@ describe('PatentService', () => {
         '2. The method of claim 1, wherein...',
       ]);
       expect(result.description).toBeUndefined();
+      expect(result.abstract).toBeUndefined();
       expect(result.family_members).toBeUndefined();
       expect(result.citations).toBeUndefined();
+    });
+
+    it('should fetch patent data with abstract included separately', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockSerpApiClient = {
+        getPatentDetails: vi.fn().mockResolvedValue({
+          title: 'Test Patent',
+          publication_number: 'US1234567',
+          abstract: 'This is a test abstract for the patent.',
+        }),
+      };
+
+      const { PatentService } = await import('../../../src/services/patent.js');
+      const service = new PatentService(
+        mockSerpApiClient as never,
+        mockLogger as never
+      );
+
+      const result = await service.fetchPatentData(
+        'patent/US1234567/en',
+        false, // includeClaims
+        false, // includeDescription
+        true, // includeAbstract
+        false, // includeFamilyMembers
+        false, // includeCitations
+        false // includeMetadata
+      );
+
+      expect(result.abstract).toBe('This is a test abstract for the patent.');
+      expect(result.claims).toBeUndefined();
+      expect(result.description).toBeUndefined();
+      expect(result.title).toBeUndefined(); // Metadata not included
     });
 
     it('should extract family members from country_status', async () => {
@@ -147,11 +188,12 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        false,
-        false,
-        true,
-        false,
-        false
+        false, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        true, // includeFamilyMembers
+        false, // includeCitations
+        false // includeMetadata
       );
 
       expect(result.family_members).toEqual([
@@ -173,17 +215,21 @@ describe('PatentService', () => {
           title: 'Test Patent',
           publication_number: 'US1234567',
           patent_citations: {
-            original: Array(47).fill(null).map((_, i) => ({
-              publication_number: `US${i}`,
-              title: `Patent ${i}`,
-            })),
+            original: Array(47)
+              .fill(null)
+              .map((_, i) => ({
+                publication_number: `US${i}`,
+                title: `Patent ${i}`,
+              })),
             family_to_family: Array(12).fill(null),
           },
           cited_by: {
-            original: Array(8).fill(null).map((_, i) => ({
-              publication_number: `CITED${i}`,
-              title: `Cited Patent ${i}`,
-            })),
+            original: Array(8)
+              .fill(null)
+              .map((_, i) => ({
+                publication_number: `CITED${i}`,
+                title: `Cited Patent ${i}`,
+              })),
           },
         }),
       };
@@ -196,11 +242,12 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        false,
-        false,
-        false,
-        true,
-        false
+        false, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        true, // includeCitations
+        false // includeMetadata
       );
 
       expect(result.citations).toEqual({
@@ -233,11 +280,12 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        false,
-        false,
-        false,
-        true,
-        false
+        false, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        true, // includeCitations
+        false // includeMetadata
       );
 
       expect(result.citations).toBeUndefined();
@@ -266,11 +314,12 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        false,
-        false,
-        true,
-        false,
-        false
+        false, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        true, // includeFamilyMembers
+        false, // includeCitations
+        false // includeMetadata
       );
 
       expect(result.family_members).toEqual([]);
@@ -391,11 +440,12 @@ describe('PatentService', () => {
       // Test without description to avoid fetch issues in unit tests
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        false,
-        false, // Don't include description
-        false,
-        false,
-        true // Include metadata
+        false, // includeClaims
+        false, // includeDescription - Don't include description
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        false, // includeCitations
+        true // includeMetadata - Include metadata
       );
 
       expect(result.title).toBe('Test Patent');
@@ -431,12 +481,13 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        true,
-        false,
-        false,
-        false,
-        false,
-        100
+        true, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        false, // includeCitations
+        false, // includeMetadata
+        100 // maxLength
       );
 
       expect(result.claims).toBeDefined();
@@ -468,12 +519,13 @@ describe('PatentService', () => {
 
       const result = await service.fetchPatentData(
         'patent/US1234567/en',
-        true,
-        false,
-        false,
-        false,
-        false,
-        1000
+        true, // includeClaims
+        false, // includeDescription
+        false, // includeAbstract
+        false, // includeFamilyMembers
+        false, // includeCitations
+        false, // includeMetadata
+        1000 // maxLength
       );
 
       expect(result.claims).toBeDefined();
@@ -501,7 +553,9 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      await expect(service.fetchPatentData('INVALID')).rejects.toThrow('SerpAPI error');
+      await expect(service.fetchPatentData('INVALID')).rejects.toThrow(
+        'SerpAPI error'
+      );
     });
 
     it('should throw error when SerpAPI returns empty response', async () => {
@@ -514,11 +568,12 @@ describe('PatentService', () => {
 
       const mockSerpApiClient = {
         getPatentDetails: vi.fn().mockResolvedValue({
-          error: 'Google Patents Details hasn\'t returned any results for this query.',
+          error:
+            "Google Patents Details hasn't returned any results for this query.",
           search_metadata: {
             status: 'Success',
-            results_state: 'Fully empty'
-          }
+            results_state: 'Fully empty',
+          },
         }),
       };
 
@@ -529,7 +584,7 @@ describe('PatentService', () => {
       );
 
       await expect(service.fetchPatentData('FI20236453A1')).rejects.toThrow(
-        'Google Patents Details hasn\'t returned any results for this query.'
+        "Google Patents Details hasn't returned any results for this query."
       );
     });
 
@@ -551,7 +606,9 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      await expect(service.fetchPatentData('US1234567')).rejects.toThrow('Network error');
+      await expect(service.fetchPatentData('US1234567')).rejects.toThrow(
+        'Network error'
+      );
     });
   });
 });

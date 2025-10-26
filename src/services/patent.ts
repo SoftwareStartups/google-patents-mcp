@@ -1,11 +1,11 @@
 import fetch from 'node-fetch';
 import winston from 'winston';
 import type {
-    PatentCitations,
-    PatentData,
-    PatentFamilyMember,
-    SerpApiClient,
-    SerpApiPatentDetailsResponse,
+  PatentCitations,
+  PatentData,
+  PatentFamilyMember,
+  SerpApiClient,
+  SerpApiPatentDetailsResponse,
 } from '../types.js';
 
 export class PatentService {
@@ -65,7 +65,9 @@ export class PatentService {
 
     const familyMembers: PatentFamilyMember[] = [];
 
-    for (const yearApplications of Object.values(details.worldwide_applications)) {
+    for (const yearApplications of Object.values(
+      details.worldwide_applications
+    )) {
       if (Array.isArray(yearApplications)) {
         for (const app of yearApplications) {
           if (app.document_id && app.country_code && app.legal_status) {
@@ -111,13 +113,17 @@ export class PatentService {
   /**
    * Fetches description text from SerpAPI description_link
    */
-  private async fetchDescription(descriptionLink: string): Promise<string | undefined> {
+  private async fetchDescription(
+    descriptionLink: string
+  ): Promise<string | undefined> {
     try {
       const response = await fetch(descriptionLink);
       const htmlText = await response.text();
 
       // Extract description content from HTML - get everything inside the main description div
-      const descriptionMatch = htmlText.match(/<div[^>]*class="description"[^>]*>(.*?)(?=<\/body>|$)/is);
+      const descriptionMatch = htmlText.match(
+        /<div[^>]*class="description"[^>]*>(.*?)(?=<\/body>|$)/is
+      );
       if (descriptionMatch) {
         // Clean up HTML tags and return plain text
         const description = descriptionMatch[1]
@@ -128,7 +134,9 @@ export class PatentService {
         return description.length > 0 ? description : undefined;
       }
     } catch (error) {
-      this.logger.warn(`Failed to fetch description from ${descriptionLink}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `Failed to fetch description from ${descriptionLink}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     return undefined;
@@ -141,6 +149,7 @@ export class PatentService {
     details: SerpApiPatentDetailsResponse,
     includeClaims: boolean,
     includeDescription: boolean,
+    includeAbstract: boolean,
     includeFamilyMembers: boolean,
     includeCitations: boolean,
     includeMetadata: boolean,
@@ -170,7 +179,11 @@ export class PatentService {
       if (details.filing_date) result.filing_date = details.filing_date;
       if (details.publication_date)
         result.publication_date = details.publication_date;
-      if (details.abstract) result.abstract = details.abstract;
+    }
+
+    // Add abstract if requested
+    if (includeAbstract && details.abstract) {
+      result.abstract = details.abstract;
     }
 
     // Add description if requested
@@ -179,7 +192,10 @@ export class PatentService {
       if (description) {
         let processedDescription = description;
         if (maxLength && processedDescription.length > maxLength) {
-          processedDescription = this.truncateText(processedDescription, maxLength);
+          processedDescription = this.truncateText(
+            processedDescription,
+            maxLength
+          );
         }
         result.description = processedDescription;
       }
@@ -265,7 +281,8 @@ export class PatentService {
   async fetchPatentData(
     urlOrId: string,
     includeClaims = false,
-    includeDescription = true,
+    includeDescription = false,
+    includeAbstract = true,
     includeFamilyMembers = false,
     includeCitations = false,
     includeMetadata = true,
@@ -292,6 +309,7 @@ export class PatentService {
       details,
       includeClaims,
       includeDescription,
+      includeAbstract,
       includeFamilyMembers,
       includeCitations,
       includeMetadata,

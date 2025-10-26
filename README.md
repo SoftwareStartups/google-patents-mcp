@@ -25,19 +25,8 @@ npx -y @smithery/cli install @SoftwareStartups/google-patents-mcp --client claud
 * Provides two focused MCP tools for patent research:
   * `search_patents` - Fast metadata search via SerpApi
   * `get_patent` - Comprehensive patent data retrieval (claims, description, family members, citations, metadata)
-* Uses SerpApi for both search and detailed patent information, eliminating fragile HTML parsing.
+* Uses SerpApi for both search and detailed patent information via structured endpoints.
 * Can be run directly using `npx` without local installation.
-
-## Breaking Changes in v1.0.0
-
-**⚠️ This is a major version update with breaking changes:**
-
-* **Replaced `get_patent_content` with `get_patent`**: The new tool provides comprehensive patent data including family members and citations
-* **Enhanced `include` parameter**: Now supports `["claims", "description", "family_members", "citations", "metadata"]`
-* **New default behavior**: Default `include` is `["metadata", "description"]` instead of just `["description"]`
-* **Eliminated HTML parsing**: All data now comes from SerpAPI's structured endpoints for better reliability
-
-If you're upgrading from v0.x, update your tool calls from `get_patent_content` to `get_patent` and review the new `include` parameter options.
 
 ## Prerequisites
 
@@ -122,7 +111,7 @@ Searches Google Patents via SerpApi. Returns patent metadata only (no full text)
 | `q`        | string  | No       | Search query. Use semicolon to separate terms        |
 | `page`     | integer | No       | Page number for pagination (default: 1)              |
 | `num`      | integer | No       | Results per page (10-100, default: 10)               |
-| `sort`     | string  | No       | Sort by: 'relevance', 'new', 'old' (default: 'relevance') |
+| `sort`     | string  | No       | Sort by: 'new' (newest by filing/publication date) or 'old' (oldest by filing/publication date) |
 | `before`   | string  | No       | Max date filter (e.g., 'publication:20231231')       |
 | `after`    | string  | No       | Min date filter (e.g., 'publication:20230101')       |
 | `inventor` | string  | No       | Filter by inventor names (comma-separated)           |
@@ -133,7 +122,7 @@ Searches Google Patents via SerpApi. Returns patent metadata only (no full text)
 | `type`     | string  | No       | Filter by type: 'PATENT' or 'DESIGN'                 |
 | `scholar`  | boolean | No       | Include Google Scholar results (default: false)      |
 
-**Returns:** Patent metadata including title, publication number, assignee, inventor, dates, and `patent_link` (used for `get_patent_content`).
+**Returns:** Patent metadata including title, publication number, assignee, inventor, dates, and `patent_link` (used for `get_patent`).
 
 **Example:**
 
@@ -160,7 +149,7 @@ Fetches comprehensive patent data from SerpAPI including claims, description, fa
 |--------------|---------|----------|-------------------------------------------------------|
 | `patent_url` | string  | No*      | Full Google Patents URL (from search results)         |
 | `patent_id`  | string  | No*      | Patent ID (e.g., 'US1234567A')                        |
-| `include`    | array   | No       | Array of content sections to include. Valid values (case-insensitive): "claims", "description", "family_members", "citations", "metadata". Defaults to ["metadata", "description"]. |
+| `include`    | array   | No       | Array of content sections to include. Valid values (case-insensitive): "claims", "description", "abstract", "family_members", "citations", "metadata". Defaults to ["metadata", "abstract"]. |
 | `max_length` | integer | No       | Maximum character length for returned content. Content will be truncated at natural boundaries (paragraph ends, complete claims). If omitted, no limit is applied. |
 
 *At least one parameter (`patent_url` or `patent_id`) must be provided. If both are provided, `patent_url` takes precedence.
@@ -168,18 +157,25 @@ Fetches comprehensive patent data from SerpAPI including claims, description, fa
 **Returns:** JSON object with requested fields:
 
 * `patent_id` (string): Patent identifier
-* `title` (string): Patent title
-* `description` (string): Patent description text (if "description" is in include array)
+* `title` (string): Patent title (if "metadata" is in include array)
+* `abstract` (string): Patent abstract summary (if "abstract" is in include array)
+* `description` (string): Full patent description text (if "description" is in include array)
 * `claims` (string[]): Array of patent claims (if "claims" is in include array)
 * `family_members` (array): Patent family members with region and status (if "family_members" is in include array)
 * `citations` (object): Citation counts including forward_citations, backward_citations, family_to_family_citations (if "citations" is in include array)
-* `metadata` (object): Patent metadata including publication_number, assignee, inventor, dates (if "metadata" is in include array)
+* `publication_number` (string): Patent publication number (if "metadata" is in include array)
+* `assignee` (string): Patent assignee (if "metadata" is in include array)
+* `inventor` (string): Patent inventor (if "metadata" is in include array)
+* `priority_date` (string): Priority filing date (if "metadata" is in include array)
+* `filing_date` (string): Filing date (if "metadata" is in include array)
+* `publication_date` (string): Publication date (if "metadata" is in include array)
+* `grant_date` (string): Grant date (if "metadata" is in include array)
 
 Fields are omitted from the response if they are not requested in the include array or if the content could not be retrieved.
 
 **Examples:**
 
-Fetch metadata and description (default):
+Fetch metadata and abstract (default):
 
 ```json
 {
@@ -213,14 +209,26 @@ Fetch only claims:
 }
 ```
 
-Fetch comprehensive patent analysis with family and citations:
+Fetch only abstract:
+
+```json
+{
+  "name": "get_patent",
+  "arguments": {
+    "patent_id": "US7654321B2",
+    "include": ["abstract"]
+  }
+}
+```
+
+Fetch comprehensive patent analysis with all sections:
 
 ```json
 {
   "name": "get_patent",
   "arguments": {
     "patent_url": "https://patents.google.com/patent/US7654321B2",
-    "include": ["metadata", "description", "claims", "family_members", "citations"]
+    "include": ["metadata", "abstract", "description", "claims", "family_members", "citations"]
   }
 }
 ```
@@ -264,12 +272,13 @@ const patentData = await callTool({
   name: "get_patent",
   arguments: {
     patent_url: firstPatent.patent_link,
-    include: ["metadata", "description", "claims", "family_members", "citations"]
+    include: ["metadata", "abstract", "description", "claims", "family_members", "citations"]
   }
 });
 
 // Now you have comprehensive patent data including:
 // - Basic metadata (title, assignee, dates)
+// - Abstract summary
 // - Full description and claims
 // - Patent family members across different countries
 // - Citation counts for patent strength assessment

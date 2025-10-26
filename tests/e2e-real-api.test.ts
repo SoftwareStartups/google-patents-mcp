@@ -142,7 +142,10 @@ class RealApiE2ETest {
       );
     }
 
-    this.log(`   Using SerpAPI key: ${process.env.SERPAPI_API_KEY.substring(0, 8)}...`, colors.blue);
+    this.log(
+      `   Using SerpAPI key: ${process.env.SERPAPI_API_KEY.substring(0, 8)}...`,
+      colors.blue
+    );
 
     // Create client and transport
     this.client = new Client(
@@ -209,7 +212,10 @@ class RealApiE2ETest {
       throw new Error('No search results returned from real API');
     }
 
-    this.log(`  Received ${data.organic_results.length} real results`, colors.cyan);
+    this.log(
+      `  Received ${data.organic_results.length} real results`,
+      colors.cyan
+    );
 
     // Validate first result has real data
     const firstResult = data.organic_results[0];
@@ -222,12 +228,17 @@ class RealApiE2ETest {
 
     // Validate search metadata
     if (data.search_metadata?.status !== 'Success') {
-      throw new Error(`SerpAPI search status: ${data.search_metadata?.status ?? 'unknown'}`);
+      throw new Error(
+        `SerpAPI search status: ${data.search_metadata?.status ?? 'unknown'}`
+      );
     }
 
     // Log timing information
     if (data.search_metadata?.total_time_taken) {
-      this.log(`  API response time: ${data.search_metadata.total_time_taken}s`, colors.cyan);
+      this.log(
+        `  API response time: ${data.search_metadata.total_time_taken}s`,
+        colors.cyan
+      );
     }
   }
 
@@ -265,7 +276,10 @@ class RealApiE2ETest {
 
     // Validate description content
     if (content.description) {
-      this.log(`  Description length: ${content.description.length} characters`, colors.cyan);
+      this.log(
+        `  Description length: ${content.description.length} characters`,
+        colors.cyan
+      );
       if (content.description.length < 100) {
         throw new Error('Description seems too short for real patent data');
       }
@@ -286,7 +300,10 @@ class RealApiE2ETest {
 
     // Validate metadata
     if (content.publication_date || content.filing_date) {
-      this.log(`  Publication date: ${content.publication_date || 'N/A'}`, colors.cyan);
+      this.log(
+        `  Publication date: ${content.publication_date || 'N/A'}`,
+        colors.cyan
+      );
       this.log(`  Filing date: ${content.filing_date || 'N/A'}`, colors.cyan);
     }
   }
@@ -311,11 +328,17 @@ class RealApiE2ETest {
     this.validateResponse(searchResponse);
     const searchData = this.parseResponseData(searchResponse);
 
-    if (!searchData.organic_results || searchData.organic_results.length === 0) {
+    if (
+      !searchData.organic_results ||
+      searchData.organic_results.length === 0
+    ) {
       throw new Error('No search results returned for workflow test');
     }
 
-    this.log(`  Step 1: Found ${searchData.organic_results.length} patents`, colors.cyan);
+    this.log(
+      `  Step 1: Found ${searchData.organic_results.length} patents`,
+      colors.cyan
+    );
 
     // Step 2: Get content for the first patent
     const firstPatent = searchData.organic_results[0];
@@ -327,7 +350,10 @@ class RealApiE2ETest {
       ? { patent_url: firstPatent.patent_link }
       : { patent_id: firstPatent.patent_id };
 
-    this.log(`  Step 2: Fetching content for: ${firstPatent.title || 'Unknown'}`, colors.cyan);
+    this.log(
+      `  Step 2: Fetching content for: ${firstPatent.title || 'Unknown'}`,
+      colors.cyan
+    );
 
     const contentResponse = (await this.client.callTool({
       name: 'get_patent',
@@ -351,17 +377,35 @@ class RealApiE2ETest {
       throw new Error('Workflow test: No meaningful content returned');
     }
 
-    this.log(`  Step 2: Retrieved content for "${content.title || 'Unknown'}"`, colors.cyan);
+    this.log(
+      `  Step 2: Retrieved content for "${content.title || 'Unknown'}"`,
+      colors.cyan
+    );
 
     if (content.description) {
-      this.log(`  Description length: ${content.description.length} characters`, colors.cyan);
+      this.log(
+        `  Description length: ${content.description.length} characters`,
+        colors.cyan
+      );
     }
 
     // Validate that the content is related to the search query
-    if (content.description && content.description.toLowerCase().includes('neural')) {
-      this.log(`  ✓ Content relevance validated (contains "neural")`, colors.green);
-    } else if (content.title && content.title.toLowerCase().includes('neural')) {
-      this.log(`  ✓ Content relevance validated (title contains "neural")`, colors.green);
+    if (
+      content.description &&
+      content.description.toLowerCase().includes('neural')
+    ) {
+      this.log(
+        `  ✓ Content relevance validated (contains "neural")`,
+        colors.green
+      );
+    } else if (
+      content.title &&
+      content.title.toLowerCase().includes('neural')
+    ) {
+      this.log(
+        `  ✓ Content relevance validated (title contains "neural")`,
+        colors.green
+      );
     } else {
       this.log(`  ⚠ Content relevance unclear`, colors.yellow);
     }
@@ -391,26 +435,45 @@ class RealApiE2ETest {
     this.validateResponse(response);
     const data = this.parseResponseData(response);
 
-    this.log(`  Advanced search returned ${data.organic_results?.length ?? 0} results`, colors.cyan);
+    this.log(
+      `  Advanced search returned ${data.organic_results?.length ?? 0} results`,
+      colors.cyan
+    );
 
     // Validate that filters are working
     if (data.search_parameters) {
       this.log(`  Applied filters:`, colors.cyan);
-      this.log(`    Query: ${String(data.search_parameters.q || 'N/A')}`, colors.cyan);
-      this.log(`    Assignee: ${String(data.search_parameters.assignee || 'N/A')}`, colors.cyan);
-      this.log(`    Country: ${String(data.search_parameters.country || 'N/A')}`, colors.cyan);
-      this.log(`    Status: ${String(data.search_parameters.status || 'N/A')}`, colors.cyan);
+      this.log(
+        `    Query: ${String(data.search_parameters.q || 'N/A')}`,
+        colors.cyan
+      );
+      this.log(
+        `    Assignee: ${String(data.search_parameters.assignee || 'N/A')}`,
+        colors.cyan
+      );
+      this.log(
+        `    Country: ${String(data.search_parameters.country || 'N/A')}`,
+        colors.cyan
+      );
+      this.log(
+        `    Status: ${String(data.search_parameters.status || 'N/A')}`,
+        colors.cyan
+      );
     }
 
     // Check if results contain expected assignee
     if (data.organic_results && data.organic_results.length > 0) {
-      const hasIntelResults = data.organic_results.some(result =>
-        result.assignee && result.assignee.toLowerCase().includes('intel')
+      const hasIntelResults = data.organic_results.some(
+        (result) =>
+          result.assignee && result.assignee.toLowerCase().includes('intel')
       );
       if (hasIntelResults) {
         this.log(`  ✓ Found Intel-assigned patents`, colors.green);
       } else {
-        this.log(`  ⚠ No Intel-assigned patents found in results`, colors.yellow);
+        this.log(
+          `  ⚠ No Intel-assigned patents found in results`,
+          colors.yellow
+        );
       }
     }
   }
@@ -424,7 +487,13 @@ class RealApiE2ETest {
       name: 'get_patent',
       arguments: {
         patent_id: 'US7654321B2',
-        include: ['metadata', 'description', 'claims', 'family_members', 'citations'],
+        include: [
+          'metadata',
+          'description',
+          'claims',
+          'family_members',
+          'citations',
+        ],
       },
     })) as ToolResponse;
 
@@ -443,7 +512,9 @@ class RealApiE2ETest {
       metadata: !!content.title,
       description: !!content.description,
       claims: !!(content.claims && content.claims.length > 0),
-      family_members: !!(content.family_members && content.family_members.length > 0),
+      family_members: !!(
+        content.family_members && content.family_members.length > 0
+      ),
       citations: !!content.citations,
     };
 
@@ -451,23 +522,118 @@ class RealApiE2ETest {
     Object.entries(sections).forEach(([section, hasContent]) => {
       const status = hasContent ? '✓' : '✗';
       const color = hasContent ? colors.green : colors.red;
-      this.log(`    ${status} ${section}: ${hasContent ? 'present' : 'missing'}`, color);
+      this.log(
+        `    ${status} ${section}: ${hasContent ? 'present' : 'missing'}`,
+        color
+      );
     });
 
     // Validate citations if present
     if (content.citations) {
       this.log(`  Citations:`, colors.cyan);
-      this.log(`    Forward: ${content.citations.forward_citations}`, colors.cyan);
-      this.log(`    Backward: ${content.citations.backward_citations}`, colors.cyan);
+      this.log(
+        `    Forward: ${content.citations.forward_citations}`,
+        colors.cyan
+      );
+      this.log(
+        `    Backward: ${content.citations.backward_citations}`,
+        colors.cyan
+      );
     }
 
     // Validate family members if present
     if (content.family_members && content.family_members.length > 0) {
-      this.log(`  Family members: ${content.family_members.length}`, colors.cyan);
-      content.family_members.slice(0, 3).forEach(member => {
-        this.log(`    ${member.patent_id} (${member.region}) - ${member.status}`, colors.cyan);
+      this.log(
+        `  Family members: ${content.family_members.length}`,
+        colors.cyan
+      );
+      content.family_members.slice(0, 3).forEach((member) => {
+        this.log(
+          `    ${member.patent_id} (${member.region}) - ${member.status}`,
+          colors.cyan
+        );
       });
     }
+  }
+
+  private async testAbstractRetrieval(): Promise<void> {
+    if (!this.client) throw new Error('Client not initialized');
+
+    this.log(
+      `  Testing abstract retrieval with default and explicit include`,
+      colors.cyan
+    );
+
+    // Test 1: Default include (should return metadata and abstract)
+    this.log(`  Test 1: Default include (metadata + abstract)`, colors.cyan);
+    const defaultResponse = (await this.client.callTool({
+      name: 'get_patent',
+      arguments: {
+        patent_id: 'US7654321B2',
+      },
+    })) as ToolResponse;
+
+    this.validateResponse(defaultResponse);
+    const defaultText = defaultResponse.content[0].text;
+    if (typeof defaultText !== 'string') {
+      throw new Error('Default response text is not a string');
+    }
+
+    const defaultContent = JSON.parse(defaultText) as PatentData;
+
+    if (!defaultContent.abstract) {
+      throw new Error('Abstract not returned in default include');
+    }
+    if (defaultContent.description) {
+      throw new Error('Description is not returned in default include');
+    }
+
+    this.log(
+      `    ✓ Abstract present: ${defaultContent.abstract.substring(0, 100)}...`,
+      colors.green
+    );
+    this.log(`    ✓ Description not present`, colors.green);
+    this.log(
+      `    ✓ Metadata present: ${defaultContent.title || 'N/A'}`,
+      colors.green
+    );
+
+    // Test 2: Explicit abstract-only include
+    this.log(`  Test 2: Explicit abstract-only include`, colors.cyan);
+    const abstractOnlyResponse = (await this.client.callTool({
+      name: 'get_patent',
+      arguments: {
+        patent_id: 'US7654321B2',
+        include: ['abstract'],
+      },
+    })) as ToolResponse;
+
+    this.validateResponse(abstractOnlyResponse);
+    const abstractOnlyText = abstractOnlyResponse.content[0].text;
+    if (typeof abstractOnlyText !== 'string') {
+      throw new Error('Abstract-only response text is not a string');
+    }
+
+    const abstractOnlyContent = JSON.parse(abstractOnlyText) as PatentData;
+
+    if (!abstractOnlyContent.abstract) {
+      throw new Error('Abstract not returned when explicitly requested');
+    }
+    if (abstractOnlyContent.title) {
+      throw new Error(
+        'Metadata is not returned when only abstract is requested'
+      );
+    }
+
+    this.log(
+      `    ✓ Abstract present: ${abstractOnlyContent.abstract.substring(0, 100)}...`,
+      colors.green
+    );
+    this.log(`    ✓ Metadata not present`, colors.green);
+    this.log(
+      `    Abstract length: ${abstractOnlyContent.abstract.length} characters`,
+      colors.cyan
+    );
   }
 
   private validateResponse(response: ToolResponse): void {
@@ -547,8 +713,18 @@ class RealApiE2ETest {
         await this.testPatentContentWithAllSections();
       });
 
+      await this.runTest(
+        'Abstract Retrieval (Default and Explicit)',
+        async () => {
+          await this.testAbstractRetrieval();
+        }
+      );
+
       this.log('\n✅ ALL REAL API TESTS PASSED', colors.green);
-      this.log('🎉 The MCP server successfully integrates with SerpAPI!', colors.green);
+      this.log(
+        '🎉 The MCP server successfully integrates with SerpAPI!',
+        colors.green
+      );
       process.exit(0);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

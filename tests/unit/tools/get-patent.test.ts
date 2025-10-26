@@ -40,7 +40,7 @@ describe('get_patent Tool', () => {
     const mockPatentData = {
       patent_id: 'US1234567',
       title: 'Test Patent',
-      description: 'Test description',
+      abstract: 'Test abstract',
     };
 
     const mockPatentService = {
@@ -61,7 +61,8 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       false, // includeClaims
-      true, // includeDescription
+      false, // includeDescription
+      true, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       true, // includeMetadata
@@ -104,7 +105,8 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
       false, // includeClaims
-      true, // includeDescription
+      false, // includeDescription
+      true, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       true, // includeMetadata
@@ -147,7 +149,8 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       false, // includeClaims
-      true, // includeDescription
+      false, // includeDescription
+      true, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       true, // includeMetadata
@@ -275,6 +278,7 @@ describe('get_patent Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true, // includeClaims
       false, // includeDescription
+      false, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       false, // includeMetadata
@@ -313,6 +317,7 @@ describe('get_patent Tool', () => {
       'US1234567A',
       false, // includeClaims
       true, // includeDescription
+      false, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       false, // includeMetadata
@@ -343,7 +348,7 @@ describe('get_patent Tool', () => {
 
     const mockPatentData = {
       patent_id: 'US1234567',
-      description: 'Truncated description',
+      abstract: 'Truncated abstract',
     };
 
     const mockPatentService = {
@@ -363,7 +368,8 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       false, // includeClaims
-      true, // includeDescription
+      false, // includeDescription
+      true, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       true, // includeMetadata
@@ -403,6 +409,7 @@ describe('get_patent Tool', () => {
       'US1234567A',
       true, // includeClaims
       false, // includeDescription
+      false, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       false, // includeMetadata
@@ -410,7 +417,7 @@ describe('get_patent Tool', () => {
     );
   });
 
-  it('should handle empty include array by defaulting to metadata and description', async () => {
+  it('should handle empty include array by defaulting to metadata and abstract', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -421,7 +428,7 @@ describe('get_patent Tool', () => {
     const mockPatentData = {
       patent_id: 'US1234567',
       title: 'Test Patent',
-      description: 'Test description',
+      abstract: 'Test abstract',
     };
 
     const mockPatentService = {
@@ -441,7 +448,8 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       false, // includeClaims
-      true, // includeDescription
+      false, // includeDescription
+      true, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       true, // includeMetadata
@@ -481,6 +489,7 @@ describe('get_patent Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true, // includeClaims
       true, // includeDescription
+      false, // includeAbstract
       false, // includeFamilyMembers
       false, // includeCitations
       false, // includeMetadata
@@ -528,6 +537,45 @@ describe('get_patent Tool', () => {
     expect(mockPatentService.fetchPatentData).not.toHaveBeenCalled();
   });
 
+  it('should include only abstract when specified', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockPatentData = {
+      patent_id: 'US1234567',
+      abstract: 'Test abstract only',
+    };
+
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
+    };
+
+    const tool = createGetPatentTool(
+      mockPatentService as never,
+      mockLogger as never
+    );
+
+    await tool.handler({
+      patent_url: 'https://patents.google.com/patent/US1234567',
+      include: ['abstract'],
+    });
+
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+      'https://patents.google.com/patent/US1234567',
+      false, // includeClaims
+      false, // includeDescription
+      true, // includeAbstract
+      false, // includeFamilyMembers
+      false, // includeCitations
+      false, // includeMetadata
+      undefined // maxLength
+    );
+  });
+
   it('should handle multiple include sections', async () => {
     const mockLogger = {
       info: vi.fn(),
@@ -540,6 +588,7 @@ describe('get_patent Tool', () => {
       patent_id: 'US1234567',
       claims: ['Claim 1'],
       description: 'Test description',
+      abstract: 'Test abstract',
       family_members: [
         { patent_id: 'EP1234567', region: 'EP', status: 'PENDING' },
       ],
@@ -560,6 +609,7 @@ describe('get_patent Tool', () => {
       include: [
         'claims',
         'description',
+        'abstract',
         'family_members',
         'citations',
         'metadata',
@@ -570,6 +620,7 @@ describe('get_patent Tool', () => {
       'https://patents.google.com/patent/US1234567',
       true, // includeClaims
       true, // includeDescription
+      true, // includeAbstract
       true, // includeFamilyMembers
       true, // includeCitations
       true, // includeMetadata

@@ -32,7 +32,7 @@ export const getPatentToolDefinition: Tool = {
           type: 'string',
         },
         description:
-          'Array of content sections to include in response. Valid values (case-insensitive): "claims", "description", "family_members", "citations", "metadata". Defaults to ["metadata", "description"] if not provided or empty.',
+          'Array of content sections to include in response. Valid values (case-insensitive): "claims", "description", "abstract", "family_members", "citations", "metadata". Defaults to ["metadata", "abstract"] if not provided or empty.',
       },
       max_length: {
         type: 'integer',
@@ -68,14 +68,13 @@ export function createGetPatentTool(
         // Process include parameter
         const includeParam = params.include || [];
         const includeArray =
-          includeParam.length === 0
-            ? ['metadata', 'description']
-            : includeParam;
+          includeParam.length === 0 ? ['metadata', 'abstract'] : includeParam;
 
         // Normalize and validate include values
         const validSections = [
           'claims',
           'description',
+          'abstract',
           'family_members',
           'citations',
           'metadata',
@@ -97,6 +96,7 @@ export function createGetPatentTool(
         // Convert to boolean flags
         const includeClaims = normalizedInclude.includes('claims');
         const includeDescription = normalizedInclude.includes('description');
+        const includeAbstract = normalizedInclude.includes('abstract');
         const includeFamilyMembers =
           normalizedInclude.includes('family_members');
         const includeCitations = normalizedInclude.includes('citations');
@@ -107,6 +107,7 @@ export function createGetPatentTool(
           urlOrId,
           includeClaims,
           includeDescription,
+          includeAbstract,
           includeFamilyMembers,
           includeCitations,
           includeMetadata,

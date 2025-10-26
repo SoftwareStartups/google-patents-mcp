@@ -81,15 +81,18 @@ export interface SerpApiPatentDetailsResponse {
   abstract?: string;
   description_link?: string;
   claims?: string[];
-  worldwide_applications?: Record<string, Array<{
-    application_number: string;
-    country_code: string;
-    document_id: string;
-    filing_date: string;
-    legal_status: string;
-    legal_status_cat: string;
-    this_app?: boolean;
-  }>>;
+  worldwide_applications?: Record<
+    string,
+    Array<{
+      application_number: string;
+      country_code: string;
+      document_id: string;
+      filing_date: string;
+      legal_status: string;
+      legal_status_cat: string;
+      this_app?: boolean;
+    }>
+  >;
   patent_citations?: {
     original?: Array<{
       publication_number: string;
