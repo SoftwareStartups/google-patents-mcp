@@ -81,7 +81,10 @@ describe('Google Patents MCP Server', () => {
       );
 
       const tools = [
-        createSearchPatentsTool(mockSerpApiClient as never, mockLogger as never),
+        createSearchPatentsTool(
+          mockSerpApiClient as never,
+          mockLogger as never
+        ),
         createGetPatentContentTool(
           mockPatentContentService as never,
           mockLogger as never

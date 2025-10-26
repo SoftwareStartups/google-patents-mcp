@@ -21,7 +21,9 @@ describe('get_patent_content Tool', () => {
     );
 
     expect(tool.definition.name).toBe('get_patent_content');
-    expect(tool.definition.description).toContain('Fetches full patent content');
+    expect(tool.definition.description).toContain(
+      'Fetches full patent content'
+    );
     expect(tool.definition.inputSchema.properties).toHaveProperty('patent_url');
     expect(tool.definition.inputSchema.properties).toHaveProperty('patent_id');
   });
@@ -597,4 +599,3 @@ describe('get_patent_content Tool', () => {
     );
   });
 });
-

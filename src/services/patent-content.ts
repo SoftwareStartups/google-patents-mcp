@@ -66,8 +66,12 @@ export class PatentContentService {
             const claimText = this.cleanHtmlText(match[4]);
             if (claimText) {
               // Check if claim text already starts with the number to avoid duplication
-              const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(claimText);
-              claims.push(startsWithNum ? claimText : `${claimNum}. ${claimText}`);
+              const startsWithNum = new RegExp(`^${claimNum}\\.\\s`).test(
+                claimText
+              );
+              claims.push(
+                startsWithNum ? claimText : `${claimNum}. ${claimText}`
+              );
             }
           }
 
@@ -256,7 +260,9 @@ export class PatentContentService {
     }
 
     // Try to preserve complete sections
-    const descriptionMatch = text.match(/^DESCRIPTION:\n([\s\S]*?)(?=\n\nCLAIMS:|$)/);
+    const descriptionMatch = text.match(
+      /^DESCRIPTION:\n([\s\S]*?)(?=\n\nCLAIMS:|$)/
+    );
     const claimsMatch = text.match(/\n\nCLAIMS:\n([\s\S]*)$/);
 
     let result = '';
@@ -268,10 +274,7 @@ export class PatentContentService {
       remaining -= descriptionMatch[0].length;
     } else if (descriptionMatch) {
       // Truncate description to fit
-      const descPart = this.truncateDescription(
-        descriptionMatch[0],
-        maxLength
-      );
+      const descPart = this.truncateDescription(descriptionMatch[0], maxLength);
       return { text: descPart.text, truncated: true };
     }
 
@@ -377,4 +380,3 @@ export class PatentContentService {
     }
   }
 }
-

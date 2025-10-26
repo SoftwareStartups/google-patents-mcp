@@ -6,8 +6,8 @@ import { GooglePatentsServer } from './server.js';
 import { PatentContentService } from './services/patent-content.js';
 import { SerpApiClient } from './services/serpapi.js';
 import {
-    createGetPatentContentTool,
-    createSearchPatentsTool,
+  createGetPatentContentTool,
+  createSearchPatentsTool,
 } from './tools/index.js';
 
 const packageJson = JSON.parse(

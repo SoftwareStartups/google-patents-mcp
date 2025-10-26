@@ -252,4 +252,3 @@ describe('SerpApiClient', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
-

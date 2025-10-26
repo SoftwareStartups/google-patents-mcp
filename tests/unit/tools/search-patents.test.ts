@@ -123,9 +123,7 @@ describe('search_patents Tool', () => {
       mockLogger as never
     );
 
-    await expect(
-      tool.handler({ q: 'test' })
-    ).rejects.toThrow('API Error');
+    await expect(tool.handler({ q: 'test' })).rejects.toThrow('API Error');
 
     expect(mockLogger.error).toHaveBeenCalledWith(
       expect.stringContaining('Error in search_patents handler')
@@ -169,4 +167,3 @@ describe('search_patents Tool', () => {
     expect(result.content[0].text).toContain('Skyfora Oy');
   });
 });
-

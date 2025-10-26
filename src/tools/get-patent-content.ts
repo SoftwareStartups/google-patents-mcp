@@ -1,8 +1,8 @@
 import {
-    ErrorCode,
-    McpError,
-    type CallToolResult,
-    type Tool,
+  ErrorCode,
+  McpError,
+  type CallToolResult,
+  type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
 import type { PatentContentService } from '../services/patent-content.js';
@@ -114,4 +114,3 @@ export function createGetPatentContentTool(
     },
   };
 }
-

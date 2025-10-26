@@ -204,17 +204,29 @@ class IntegrationTest {
     }
 
     const contentSchema = getPatentContentTool.inputSchema as {
-      properties?: { patent_url?: unknown; patent_id?: unknown; include?: unknown };
+      properties?: {
+        patent_url?: unknown;
+        patent_id?: unknown;
+        include?: unknown;
+      };
     };
-    if (!contentSchema.properties?.patent_url || !contentSchema.properties?.patent_id) {
-      throw new Error('get_patent_content tool missing patent_url or patent_id parameters');
+    if (
+      !contentSchema.properties?.patent_url ||
+      !contentSchema.properties?.patent_id
+    ) {
+      throw new Error(
+        'get_patent_content tool missing patent_url or patent_id parameters'
+      );
     }
     if (!contentSchema.properties?.include) {
       throw new Error('get_patent_content tool missing include parameter');
     }
 
     this.log(`  Found ${response.tools.length} tool(s)`, colors.cyan);
-    this.log(`  Tools: ${searchPatentsTool.name}, ${getPatentContentTool.name}`, colors.cyan);
+    this.log(
+      `  Tools: ${searchPatentsTool.name}, ${getPatentContentTool.name}`,
+      colors.cyan
+    );
   }
 
   private async testBasicSearch(): Promise<void> {
@@ -241,7 +253,9 @@ class IntegrationTest {
         full_content?: unknown;
       };
       if (firstResult.full_content) {
-        throw new Error('search_patents should not include full_content in results');
+        throw new Error(
+          'search_patents should not include full_content in results'
+        );
       }
     }
 
@@ -347,10 +361,7 @@ class IntegrationTest {
   private async testGetPatentContentByUrl(): Promise<void> {
     if (!this.client) throw new Error('Client not initialized');
 
-    this.log(
-      `  Fetching patent content by URL`,
-      colors.cyan
-    );
+    this.log(`  Fetching patent content by URL`, colors.cyan);
 
     // Use a known patent URL
     const response = (await this.client.callTool({
@@ -389,10 +400,7 @@ class IntegrationTest {
   private async testGetPatentContentById(): Promise<void> {
     if (!this.client) throw new Error('Client not initialized');
 
-    this.log(
-      `  Fetching patent content by ID`,
-      colors.cyan
-    );
+    this.log(`  Fetching patent content by ID`, colors.cyan);
 
     const response = (await this.client.callTool({
       name: 'get_patent_content',
@@ -438,7 +446,10 @@ class IntegrationTest {
     this.validateResponse(searchResponse);
     const searchData = this.parseResponseData(searchResponse);
 
-    if (!searchData.organic_results || searchData.organic_results.length === 0) {
+    if (
+      !searchData.organic_results ||
+      searchData.organic_results.length === 0
+    ) {
       throw new Error('No search results returned');
     }
 
@@ -483,10 +494,7 @@ class IntegrationTest {
     );
 
     if (content.content_included && content.claims) {
-      this.log(
-        `  Retrieved ${content.claims.length} claims`,
-        colors.cyan
-      );
+      this.log(`  Retrieved ${content.claims.length} claims`, colors.cyan);
     }
   }
 

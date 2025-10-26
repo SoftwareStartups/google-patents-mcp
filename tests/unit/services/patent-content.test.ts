@@ -425,9 +425,7 @@ describe('PatentContentService', () => {
         debug: vi.fn(),
       };
 
-      const mockFetch = vi
-        .fn()
-        .mockRejectedValue(new Error('Network error'));
+      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       vi.doMock('node-fetch', () => ({
         default: mockFetch,
@@ -749,7 +747,8 @@ describe('PatentContentService', () => {
         debug: vi.fn(),
       };
 
-      const longDescription = 'First paragraph.\n\nSecond paragraph.\n\nThird paragraph that is very long and will be truncated.';
+      const longDescription =
+        'First paragraph.\n\nSecond paragraph.\n\nThird paragraph that is very long and will be truncated.';
       const mockHtml = `
         <html>
           <section itemprop="description">
@@ -783,8 +782,12 @@ describe('PatentContentService', () => {
       expect(result.description).toBeDefined();
       expect(result.description).toContain('[Content truncated');
       // Check that it actually truncated the original content, not just the total length
-      const originalTextBeforeIndicator = result.description!.split('[Content truncated')[0].trim();
-      expect(originalTextBeforeIndicator.length).toBeLessThan(longDescription.length);
+      const originalTextBeforeIndicator = result
+        .description!.split('[Content truncated')[0]
+        .trim();
+      expect(originalTextBeforeIndicator.length).toBeLessThan(
+        longDescription.length
+      );
     });
 
     it('should truncate claims array to complete claims only', async () => {
@@ -971,4 +974,3 @@ describe('PatentContentService', () => {
     });
   });
 });
-
