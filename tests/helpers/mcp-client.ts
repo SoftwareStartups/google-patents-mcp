@@ -37,6 +37,9 @@ export async function createMcpTestClient(): Promise<McpTestClient> {
     env: {
       ...process.env,
       SERPAPI_API_KEY: process.env.SERPAPI_API_KEY || 'test_api_key',
+      ...(process.env.SERPAPI_BASE_URL && {
+        SERPAPI_BASE_URL: process.env.SERPAPI_BASE_URL,
+      }),
       LOG_LEVEL: process.env.LOG_LEVEL || 'error', // Suppress logs during tests unless overridden
     },
   });

@@ -130,6 +130,5 @@ jobs:
 
       - name: Run integration tests
         env:
-          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
-          LOG_LEVEL: info
+          LOG_LEVEL: error
         run: npm run test:integration

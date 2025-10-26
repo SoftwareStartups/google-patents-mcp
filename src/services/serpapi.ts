@@ -10,11 +10,19 @@ export class SerpApiClient {
   private readonly apiKey: string;
   private readonly logger: winston.Logger;
   private readonly timeoutMs: number;
+  private readonly baseUrl: string;
 
-  constructor(apiKey: string, logger: winston.Logger, timeoutMs = 30000) {
+  constructor(
+    apiKey: string,
+    logger: winston.Logger,
+    timeoutMs = 30000,
+    baseUrl?: string
+  ) {
     this.apiKey = apiKey;
     this.logger = logger;
     this.timeoutMs = timeoutMs;
+    this.baseUrl =
+      baseUrl || process.env.SERPAPI_BASE_URL || 'https://serpapi.com';
   }
 
   async searchPatents(args: SearchPatentsArgs): Promise<SerpApiResponse> {
@@ -38,7 +46,7 @@ export class SerpApiClient {
         }
       }
 
-      const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+      const apiUrl = `${this.baseUrl}/search.json?${searchParams.toString()}`;
       this.logger.info(
         `Calling SerpApi: ${apiUrl.replace(this.apiKey, '****')}`
       );
@@ -97,7 +105,7 @@ export class SerpApiClient {
         api_key: this.apiKey,
       });
 
-      const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+      const apiUrl = `${this.baseUrl}/search.json?${searchParams.toString()}`;
       this.logger.info(
         `Calling SerpApi Patent Details: ${apiUrl.replace(this.apiKey, '****')}`
       );
