@@ -3,12 +3,9 @@ import { readFileSync } from 'fs';
 import { getConfig } from './config.js';
 import { createLogger } from './logger.js';
 import { GooglePatentsServer } from './server.js';
-import { PatentContentService } from './services/patent-content.js';
+import { PatentService } from './services/patent.js';
 import { SerpApiClient } from './services/serpapi.js';
-import {
-  createGetPatentContentTool,
-  createSearchPatentsTool,
-} from './tools/index.js';
+import { createGetPatentTool, createSearchPatentsTool } from './tools/index.js';
 
 const packageJson = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
@@ -53,12 +50,12 @@ const main = async () => {
 
   // Initialize services
   const serpApiClient = new SerpApiClient(config.serpApiKey, logger);
-  const patentContentService = new PatentContentService(logger);
+  const patentService = new PatentService(serpApiClient, logger);
 
   // Create tools
   const tools = [
     createSearchPatentsTool(serpApiClient, logger),
-    createGetPatentContentTool(patentContentService, logger),
+    createGetPatentTool(patentService, logger),
   ];
 
   // Initialize server with tools

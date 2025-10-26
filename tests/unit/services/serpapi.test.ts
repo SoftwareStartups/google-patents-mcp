@@ -215,7 +215,7 @@ describe('SerpApiClient', () => {
     );
   });
 
-  it('should not include full_content in results', async () => {
+  it('should call getPatentDetails with correct parameters', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -223,20 +223,15 @@ describe('SerpApiClient', () => {
       debug: vi.fn(),
     };
 
-    const mockResponse = {
-      organic_results: [
-        {
-          patent_id: 'US1234567',
-          title: 'Test Patent',
-          patent_link: 'https://patents.google.com/patent/US1234567',
-        },
-      ],
-    };
-
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => await Promise.resolve(mockResponse),
+      json: async () =>
+        await Promise.resolve({
+          patent_id: 'US1234567',
+          title: 'Test Patent',
+          description: 'Test description',
+        }),
     });
 
     vi.doMock('node-fetch', () => ({
@@ -244,11 +239,72 @@ describe('SerpApiClient', () => {
     }));
 
     const { SerpApiClient } = await import('../../../src/services/serpapi.js');
-    const client = new SerpApiClient('test_key', mockLogger as never);
+    const client = new SerpApiClient('test_api_key', mockLogger as never);
 
-    const result = await client.searchPatents({ q: 'test' });
+    await client.getPatentDetails('US1234567');
 
-    expect(result.organic_results?.[0]).not.toHaveProperty('full_content');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('engine=google_patents_details'),
+      expect.any(Object)
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('patent_id=US1234567'),
+      expect.any(Object)
+    );
+  });
+
+  it('should handle getPatentDetails API errors correctly', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: async () => await Promise.resolve('Patent not found'),
+    });
+
+    vi.doMock('node-fetch', () => ({
+      default: mockFetch,
+    }));
+
+    const { SerpApiClient } = await import('../../../src/services/serpapi.js');
+    const client = new SerpApiClient('invalid_key', mockLogger as never);
+
+    await expect(client.getPatentDetails('INVALID')).rejects.toThrow(
+      'SerpApi patent details request failed'
+    );
+  });
+
+  it('should handle getPatentDetails timeout scenarios', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+
+    const mockFetch = vi.fn().mockImplementation(() => {
+      const error = new Error('The operation was aborted') as Error & {
+        name: string;
+      };
+      error.name = 'AbortError';
+      return Promise.reject(error);
+    });
+
+    vi.doMock('node-fetch', () => ({
+      default: mockFetch,
+    }));
+
+    const { SerpApiClient } = await import('../../../src/services/serpapi.js');
+    const client = new SerpApiClient('test_key', mockLogger as never, 100);
+
+    await expect(client.getPatentDetails('US1234567')).rejects.toThrow(
+      'SerpApi patent details request timed out'
+    );
   });
 });

@@ -158,7 +158,7 @@ class IntegrationTest {
       (tool) => tool.name === 'search_patents'
     );
     const getPatentContentTool = response.tools.find(
-      (tool) => tool.name === 'get_patent_content'
+      (tool) => tool.name === 'get_patent'
     );
 
     if (!searchPatentsTool) {
@@ -166,7 +166,7 @@ class IntegrationTest {
     }
 
     if (!getPatentContentTool) {
-      throw new Error('get_patent_content tool not found in tools list');
+      throw new Error('get_patent tool not found in tools list');
     }
 
     // Validate search_patents tool schema
@@ -181,16 +181,16 @@ class IntegrationTest {
       throw new Error('search_patents tool missing input schema');
     }
 
-    // Validate get_patent_content tool schema
+    // Validate get_patent tool schema
     if (!getPatentContentTool.description) {
-      throw new Error('get_patent_content tool missing description');
+      throw new Error('get_patent tool missing description');
     }
 
     if (
       !getPatentContentTool.inputSchema ||
       !getPatentContentTool.inputSchema.properties
     ) {
-      throw new Error('get_patent_content tool missing input schema');
+      throw new Error('get_patent tool missing input schema');
     }
 
     const contentSchema = getPatentContentTool.inputSchema as {
@@ -205,11 +205,11 @@ class IntegrationTest {
       !contentSchema.properties?.patent_id
     ) {
       throw new Error(
-        'get_patent_content tool missing patent_url or patent_id parameters'
+        'get_patent tool missing patent_url or patent_id parameters'
       );
     }
     if (!contentSchema.properties?.include) {
-      throw new Error('get_patent_content tool missing include parameter');
+      throw new Error('get_patent tool missing include parameter');
     }
 
     this.log(`  Found ${response.tools.length} tool(s)`, colors.cyan);
@@ -355,7 +355,7 @@ class IntegrationTest {
 
     // Use a known patent URL
     const response = (await this.client.callTool({
-      name: 'get_patent_content',
+      name: 'get_patent',
       arguments: {
         patent_url: 'https://patents.google.com/patent/US7654321B2',
       },
@@ -390,7 +390,7 @@ class IntegrationTest {
     this.log(`  Fetching patent content by ID`, colors.cyan);
 
     const response = (await this.client.callTool({
-      name: 'get_patent_content',
+      name: 'get_patent',
       arguments: {
         patent_id: 'US7654321B2',
       },
@@ -463,7 +463,7 @@ class IntegrationTest {
       : { patent_id: firstPatent.patent_id };
 
     const contentResponse = (await this.client.callTool({
-      name: 'get_patent_content',
+      name: 'get_patent',
       arguments: contentArgs,
     })) as ToolResponse;
 

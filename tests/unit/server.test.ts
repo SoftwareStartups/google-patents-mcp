@@ -67,17 +67,20 @@ describe('Google Patents MCP Server', () => {
 
       const mockSerpApiClient = {
         searchPatents: vi.fn(),
-      };
-
-      const mockPatentContentService = {
-        fetchContent: vi.fn(),
+        getPatentDetails: vi.fn(),
       };
 
       const { createSearchPatentsTool } = await import(
         '../../src/tools/search-patents.js'
       );
-      const { createGetPatentContentTool } = await import(
-        '../../src/tools/get-patent-content.js'
+      const { createGetPatentTool } = await import(
+        '../../src/tools/get-patent.js'
+      );
+      const { PatentService } = await import('../../src/services/patent.js');
+
+      const patentService = new PatentService(
+        mockSerpApiClient as never,
+        mockLogger as never
       );
 
       const tools = [
@@ -85,15 +88,12 @@ describe('Google Patents MCP Server', () => {
           mockSerpApiClient as never,
           mockLogger as never
         ),
-        createGetPatentContentTool(
-          mockPatentContentService as never,
-          mockLogger as never
-        ),
+        createGetPatentTool(patentService as never, mockLogger as never),
       ];
 
       expect(tools).toHaveLength(2);
       expect(tools[0].definition.name).toBe('search_patents');
-      expect(tools[1].definition.name).toBe('get_patent_content');
+      expect(tools[1].definition.name).toBe('get_patent');
     });
   });
 

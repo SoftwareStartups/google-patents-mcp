@@ -1,6 +1,10 @@
 import fetch, { type Response } from 'node-fetch';
 import winston from 'winston';
-import type { SearchPatentsArgs, SerpApiResponse } from '../types.js';
+import type {
+  SearchPatentsArgs,
+  SerpApiPatentDetailsResponse,
+  SerpApiResponse,
+} from '../types.js';
 
 export class SerpApiClient {
   private readonly apiKey: string;
@@ -72,6 +76,69 @@ export class SerpApiClient {
         error instanceof Error ? error.message : String(error);
       this.logger.error(
         `Error during fetch or JSON parsing for query "${query}": ${errorMessage}`
+      );
+      if (error instanceof Error && error.stack) {
+        this.logger.error(`Stack trace: ${error.stack}`);
+      }
+      throw new Error(`An unexpected error occurred: ${errorMessage}`);
+    }
+  }
+
+  async getPatentDetails(
+    patentId: string
+  ): Promise<SerpApiPatentDetailsResponse> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const searchParams = new URLSearchParams({
+        engine: 'google_patents_details',
+        patent_id: patentId,
+        api_key: this.apiKey,
+      });
+
+      const apiUrl = `https://serpapi.com/search.json?${searchParams.toString()}`;
+      this.logger.info(
+        `Calling SerpApi Patent Details: ${apiUrl.replace(this.apiKey, '****')}`
+      );
+
+      const response = await fetch(apiUrl, { signal: controller.signal });
+
+      if (!response.ok) {
+        const errorBody = await this.getErrorBody(response);
+        this.logger.error(
+          `SerpApi patent details request failed with status ${response.status} ${response.statusText}. Response body: ${errorBody}`
+        );
+        throw new Error(
+          `SerpApi patent details request failed: ${response.statusText}. Body: ${errorBody}`
+        );
+      }
+
+      const data = (await response.json()) as SerpApiPatentDetailsResponse;
+      this.logger.info(
+        `SerpApi patent details request successful for patent: "${patentId}"`
+      );
+      this.logger.debug(
+        `SerpApi patent details response status: ${response.status}`
+      );
+
+      clearTimeout(timeoutId);
+
+      return data;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.logger.error(
+          `SerpApi patent details request timed out after ${this.timeoutMs}ms for patent "${patentId}"`
+        );
+        throw new Error('SerpApi patent details request timed out');
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Error during patent details fetch or JSON parsing for patent "${patentId}": ${errorMessage}`
       );
       if (error instanceof Error && error.stack) {
         this.logger.error(`Stack trace: ${error.stack}`);

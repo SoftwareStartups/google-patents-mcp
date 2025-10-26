@@ -5,14 +5,14 @@ import {
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import winston from 'winston';
-import type { PatentContentService } from '../services/patent-content.js';
-import type { GetPatentContentArgs } from '../types.js';
+import type { PatentService } from '../services/patent.js';
+import type { GetPatentArgs } from '../types.js';
 import type { ToolDefinition } from './types.js';
 
-export const getPatentContentToolDefinition: Tool = {
-  name: 'get_patent_content',
+export const getPatentToolDefinition: Tool = {
+  name: 'get_patent',
   description:
-    'Fetches full patent content including claims and description from Google Patents. Accepts either a patent URL (from search results) or a patent ID. Returns parsed patent text with selective content control via the include parameter.',
+    'Fetches comprehensive patent data from SerpAPI including claims, description, family members, citations, and metadata. Supports selective content retrieval via the include parameter.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -24,7 +24,7 @@ export const getPatentContentToolDefinition: Tool = {
       patent_id: {
         type: 'string',
         description:
-          'Patent ID (e.g., "US1234567A" or "patent/US1234567A/en"). Will be converted to a Google Patents URL.',
+          'Patent ID (e.g., "US1234567A" or "patent/US1234567A/en"). Will be converted to a patent ID for SerpAPI.',
       },
       include: {
         type: 'array',
@@ -32,7 +32,7 @@ export const getPatentContentToolDefinition: Tool = {
           type: 'string',
         },
         description:
-          'Array of content sections to include in response. Valid values (case-insensitive): "claims", "description", "full_text". Defaults to ["description"] if not provided or empty.',
+          'Array of content sections to include in response. Valid values (case-insensitive): "claims", "description", "family_members", "citations", "metadata". Defaults to ["metadata", "description"] if not provided or empty.',
       },
       max_length: {
         type: 'integer',
@@ -44,14 +44,14 @@ export const getPatentContentToolDefinition: Tool = {
   },
 };
 
-export function createGetPatentContentTool(
-  patentContentService: PatentContentService,
+export function createGetPatentTool(
+  patentService: PatentService,
   logger: winston.Logger
 ): ToolDefinition {
   return {
-    definition: getPatentContentToolDefinition,
+    definition: getPatentToolDefinition,
     handler: async (args: unknown): Promise<CallToolResult> => {
-      const params = args as GetPatentContentArgs;
+      const params = args as GetPatentArgs;
 
       // Validate that at least one parameter is provided
       if (!params.patent_url && !params.patent_id) {
@@ -68,10 +68,18 @@ export function createGetPatentContentTool(
         // Process include parameter
         const includeParam = params.include || [];
         const includeArray =
-          includeParam.length === 0 ? ['description'] : includeParam;
+          includeParam.length === 0
+            ? ['metadata', 'description']
+            : includeParam;
 
         // Normalize and validate include values
-        const validSections = ['claims', 'description', 'full_text'];
+        const validSections = [
+          'claims',
+          'description',
+          'family_members',
+          'citations',
+          'metadata',
+        ];
         const normalizedInclude = includeArray.map((item) =>
           item.toLowerCase()
         );
@@ -89,26 +97,34 @@ export function createGetPatentContentTool(
         // Convert to boolean flags
         const includeClaims = normalizedInclude.includes('claims');
         const includeDescription = normalizedInclude.includes('description');
-        const includeFullText = normalizedInclude.includes('full_text');
+        const includeFamilyMembers =
+          normalizedInclude.includes('family_members');
+        const includeCitations = normalizedInclude.includes('citations');
+        const includeMetadata = normalizedInclude.includes('metadata');
         const maxLength = params.max_length;
 
-        const content = await patentContentService.fetchContent(
+        const patentData = await patentService.fetchPatentData(
           urlOrId,
           includeClaims,
           includeDescription,
-          includeFullText,
+          includeFamilyMembers,
+          includeCitations,
+          includeMetadata,
           maxLength
         );
 
         return {
           content: [
-            { type: 'text' as const, text: JSON.stringify(content, null, 2) },
+            {
+              type: 'text' as const,
+              text: JSON.stringify(patentData, null, 2),
+            },
           ],
         };
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        logger.error(`Error in get_patent_content handler: ${errorMessage}`);
+        logger.error(`Error in get_patent handler: ${errorMessage}`);
         throw error;
       }
     },

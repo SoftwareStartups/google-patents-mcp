@@ -1,8 +1,8 @@
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { describe, expect, it, vi } from 'vitest';
-import { createGetPatentContentTool } from '../../../src/tools/get-patent-content.js';
+import { createGetPatentTool } from '../../../src/tools/get-patent.js';
 
-describe('get_patent_content Tool', () => {
+describe('get_patent Tool', () => {
   it('should have correct tool definition', () => {
     const mockLogger = {
       info: vi.fn(),
@@ -11,24 +11,25 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn(),
+    const mockPatentService = {
+      fetchPatentData: vi.fn(),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
-    expect(tool.definition.name).toBe('get_patent_content');
+    expect(tool.definition.name).toBe('get_patent');
     expect(tool.definition.description).toContain(
-      'Fetches full patent content'
+      'Fetches comprehensive patent data'
     );
     expect(tool.definition.inputSchema.properties).toHaveProperty('patent_url');
     expect(tool.definition.inputSchema.properties).toHaveProperty('patent_id');
+    expect(tool.definition.inputSchema.properties).toHaveProperty('include');
   });
 
-  it('should call patentContentService.fetchContent with patent_url and default include', async () => {
+  it('should call patentService.fetchPatentData with patent_url and default include', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -36,16 +37,18 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
+      title: 'Test Patent',
       description: 'Test description',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -55,20 +58,22 @@ describe('get_patent_content Tool', () => {
 
     const result = await tool.handler(args);
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false,
-      true,
-      false,
-      undefined
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      true, // includeMetadata
+      undefined // maxLength
     );
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
     const text = result.content[0].text as string;
-    expect(JSON.parse(text)).toEqual(mockContent);
+    expect(JSON.parse(text)).toEqual(mockPatentData);
   });
 
-  it('should call patentContentService.fetchContent with patent_id and default include', async () => {
+  it('should call patentService.fetchPatentData with patent_id and default include', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -76,16 +81,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
-      description: 'Test description',
+    const mockPatentData = {
+      patent_id: 'US1234567',
+      title: 'Test Patent',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -95,16 +101,18 @@ describe('get_patent_content Tool', () => {
 
     const result = await tool.handler(args);
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      false,
-      true,
-      false,
-      undefined
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      true, // includeMetadata
+      undefined // maxLength
     );
     expect(result.content[0].type).toBe('text');
     const text = result.content[0].text as string;
-    expect(JSON.parse(text)).toEqual(mockContent);
+    expect(JSON.parse(text)).toEqual(mockPatentData);
   });
 
   it('should prefer patent_url over patent_id when both provided', async () => {
@@ -115,16 +123,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
-      description: 'Test',
+    const mockPatentData = {
+      patent_id: 'US1234567',
+      title: 'Test',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -135,12 +144,14 @@ describe('get_patent_content Tool', () => {
 
     await tool.handler(args);
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false,
-      true,
-      false,
-      undefined
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      true, // includeMetadata
+      undefined // maxLength
     );
   });
 
@@ -152,12 +163,12 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn(),
+    const mockPatentService = {
+      fetchPatentData: vi.fn(),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -176,10 +187,10 @@ describe('get_patent_content Tool', () => {
       );
     }
 
-    expect(mockPatentContentService.fetchContent).not.toHaveBeenCalled();
+    expect(mockPatentService.fetchPatentData).not.toHaveBeenCalled();
   });
 
-  it('should handle errors from patentContentService', async () => {
+  it('should handle errors from patentService', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -187,12 +198,12 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockRejectedValue(new Error('Fetch failed')),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockRejectedValue(new Error('Fetch failed')),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -201,7 +212,7 @@ describe('get_patent_content Tool', () => {
     ).rejects.toThrow('Fetch failed');
 
     expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining('Error in get_patent_content handler')
+      expect.stringContaining('Error in get_patent handler')
     );
   });
 
@@ -213,14 +224,14 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {};
+    const mockPatentData = {};
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -229,42 +240,8 @@ describe('get_patent_content Tool', () => {
     });
 
     const text = result.content[0].text as string;
-    const parsedContent = JSON.parse(text) as Record<string, unknown>;
-    expect(parsedContent).toEqual({});
-  });
-
-  it('should use description as default when include not provided', async () => {
-    const mockLogger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    };
-
-    const mockContent = {
-      description: 'Test description',
-    };
-
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
-    };
-
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
-      mockLogger as never
-    );
-
-    await tool.handler({
-      patent_url: 'https://patents.google.com/patent/US1234567',
-    });
-
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
-      'https://patents.google.com/patent/US1234567',
-      false,
-      true,
-      false,
-      undefined
-    );
+    const parsedData = JSON.parse(text) as Record<string, unknown>;
+    expect(parsedData).toEqual({});
   });
 
   it('should include only claims when specified', async () => {
@@ -275,16 +252,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       claims: ['Claim 1'],
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -293,12 +271,14 @@ describe('get_patent_content Tool', () => {
       include: ['claims'],
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true,
-      false,
-      false,
-      undefined
+      true, // includeClaims
+      false, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      false, // includeMetadata
+      undefined // maxLength
     );
   });
 
@@ -310,16 +290,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       description: 'Test description only',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -328,23 +309,28 @@ describe('get_patent_content Tool', () => {
       include: ['description'],
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      false,
-      true,
-      false,
-      undefined
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      false, // includeMetadata
+      undefined // maxLength
     );
 
     const text = result.content[0].text as string;
-    const parsedContent = JSON.parse(text) as {
+    const parsedData = JSON.parse(text) as {
       description?: string;
       claims?: string[];
-      full_text?: string;
+      family_members?: unknown[];
+      citations?: unknown;
+      patent_id?: string;
     };
-    expect(parsedContent).toEqual({ description: 'Test description only' });
-    expect(parsedContent.claims).toBeUndefined();
-    expect(parsedContent.full_text).toBeUndefined();
+    expect(parsedData).toEqual({
+      patent_id: 'US1234567',
+      description: 'Test description only',
+    });
   });
 
   it('should pass max_length parameter to service', async () => {
@@ -355,16 +341,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       description: 'Truncated description',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -373,12 +360,14 @@ describe('get_patent_content Tool', () => {
       max_length: 1000,
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false,
-      true,
-      false,
-      1000
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      true, // includeMetadata
+      1000 // maxLength
     );
   });
 
@@ -390,16 +379,17 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       claims: ['Claim 1'],
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -409,16 +399,18 @@ describe('get_patent_content Tool', () => {
       max_length: 500,
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'US1234567A',
-      true,
-      false,
-      false,
-      500
+      true, // includeClaims
+      false, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      false, // includeMetadata
+      500 // maxLength
     );
   });
 
-  it('should return truncated content when max_length is applied', async () => {
+  it('should handle empty include array by defaulting to metadata and description', async () => {
     const mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -426,49 +418,18 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
-      description:
-        'Short description\n\n[Content truncated - 50 of 10000 characters shown]',
-    };
-
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
-    };
-
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
-      mockLogger as never
-    );
-
-    const result = await tool.handler({
-      patent_id: 'US1234567A',
-      include: ['description'],
-      max_length: 100,
-    });
-
-    const text = result.content[0].text as string;
-    const parsedContent = JSON.parse(text) as { description?: string };
-    expect(parsedContent.description).toContain('[Content truncated');
-  });
-
-  it('should handle empty include array by defaulting to description', async () => {
-    const mockLogger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    };
-
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
+      title: 'Test Patent',
       description: 'Test description',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -477,12 +438,14 @@ describe('get_patent_content Tool', () => {
       include: [],
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      false,
-      true,
-      false,
-      undefined
+      false, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      true, // includeMetadata
+      undefined // maxLength
     );
   });
 
@@ -494,17 +457,18 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       claims: ['Claim 1'],
       description: 'Test description',
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -513,12 +477,14 @@ describe('get_patent_content Tool', () => {
       include: ['CLAIMS', 'Description'],
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true,
-      true,
-      false,
-      undefined
+      true, // includeClaims
+      true, // includeDescription
+      false, // includeFamilyMembers
+      false, // includeCitations
+      false, // includeMetadata
+      undefined // maxLength
     );
   });
 
@@ -530,12 +496,12 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn(),
+    const mockPatentService = {
+      fetchPatentData: vi.fn(),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
@@ -559,7 +525,7 @@ describe('get_patent_content Tool', () => {
       expect(errorMessage).toContain('invalid_section');
     }
 
-    expect(mockPatentContentService.fetchContent).not.toHaveBeenCalled();
+    expect(mockPatentService.fetchPatentData).not.toHaveBeenCalled();
   });
 
   it('should handle multiple include sections', async () => {
@@ -570,32 +536,44 @@ describe('get_patent_content Tool', () => {
       debug: vi.fn(),
     };
 
-    const mockContent = {
+    const mockPatentData = {
+      patent_id: 'US1234567',
       claims: ['Claim 1'],
       description: 'Test description',
-      full_text: 'Full text',
+      family_members: [
+        { patent_id: 'EP1234567', region: 'EP', status: 'PENDING' },
+      ],
+      citations: { forward_citations: 10, backward_citations: 5 },
     };
 
-    const mockPatentContentService = {
-      fetchContent: vi.fn().mockResolvedValue(mockContent),
+    const mockPatentService = {
+      fetchPatentData: vi.fn().mockResolvedValue(mockPatentData),
     };
 
-    const tool = createGetPatentContentTool(
-      mockPatentContentService as never,
+    const tool = createGetPatentTool(
+      mockPatentService as never,
       mockLogger as never
     );
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
-      include: ['claims', 'description', 'full_text'],
+      include: [
+        'claims',
+        'description',
+        'family_members',
+        'citations',
+        'metadata',
+      ],
     });
 
-    expect(mockPatentContentService.fetchContent).toHaveBeenCalledWith(
+    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      true,
-      true,
-      true,
-      undefined
+      true, // includeClaims
+      true, // includeDescription
+      true, // includeFamilyMembers
+      true, // includeCitations
+      true, // includeMetadata
+      undefined // maxLength
     );
   });
 });
