@@ -1,10 +1,10 @@
 import winston from 'winston';
 import type {
-  PatentCitations,
-  PatentData,
-  PatentFamilyMember,
-  SerpApiClient,
-  SerpApiPatentDetailsResponse,
+    PatentCitations,
+    PatentData,
+    PatentFamilyMember,
+    SerpApiClient,
+    SerpApiPatentDetailsResponse,
 } from '../types.js';
 
 export class PatentService {
@@ -26,21 +26,30 @@ export class PatentService {
   }
 
   /**
-   * Determines if input is a URL or patent ID and returns the patent ID
+   * Determines if input is a URL or patent ID and returns the patent ID in correct format
    */
   private resolvePatentId(urlOrId: string): string {
     if (urlOrId.startsWith('http://') || urlOrId.startsWith('https://')) {
       // Extract patent ID from URL
       const match = urlOrId.match(/patent\/([^/]+)/);
       if (match) {
-        return match[1];
+        const patentNumber = match[1];
+        return `patent/${patentNumber}/en`;
       }
       // Fallback: try to extract from the end of the URL
       const parts = urlOrId.split('/');
-      return parts[parts.length - 1];
+      const patentNumber = parts[parts.length - 1];
+      return `patent/${patentNumber}/en`;
     }
-    // Remove any path-like prefix if present
-    return urlOrId.replace(/^patent\//, '').replace(/\/.*$/, '');
+
+    // If it's already in the correct format (patent/number/lang), return as is
+    if (urlOrId.startsWith('patent/')) {
+      return urlOrId;
+    }
+
+    // Otherwise, format as patent/number/en
+    const cleanId = urlOrId.replace(/^patent\//, '').replace(/\/.*$/, '');
+    return `patent/${cleanId}/en`;
   }
 
   /**
@@ -208,25 +217,24 @@ export class PatentService {
   ): Promise<PatentData> {
     const patentId = this.resolvePatentId(urlOrId);
 
-    try {
-      this.logger.debug(`Fetching patent data for: ${patentId}`);
+    this.logger.debug(`Fetching patent data for: ${patentId}`);
 
-      const details = await this.serpApiClient.getPatentDetails(patentId);
+    const details = await this.serpApiClient.getPatentDetails(patentId);
 
-      return this.formatContent(
-        details,
-        includeClaims,
-        includeDescription,
-        includeFamilyMembers,
-        includeCitations,
-        includeMetadata,
-        maxLength
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        `Error fetching patent data for ${patentId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return {};
+    // Validate that the response contains meaningful data
+    if (details.error || (!details.patent_id && !details.title && !details.description && !details.abstract)) {
+      const errorMessage = details.error || `No patent data found for patent ID: ${patentId}. The patent may not exist in the database or may not be accessible.`;
+      throw new Error(errorMessage);
     }
+
+    return this.formatContent(
+      details,
+      includeClaims,
+      includeDescription,
+      includeFamilyMembers,
+      includeCitations,
+      includeMetadata,
+      maxLength
+    );
   }
 }

@@ -39,7 +39,7 @@ describe('PatentService', () => {
       const result = await service.fetchPatentData('US1234567');
 
       expect(mockSerpApiClient.getPatentDetails).toHaveBeenCalledWith(
-        'US1234567'
+        'patent/US1234567/en'
       );
       expect(result.patent_id).toBe('US1234567');
       expect(result.title).toBe('Test Patent');
@@ -78,7 +78,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         true,
         false,
         false,
@@ -133,7 +133,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         false,
         true,
@@ -174,7 +174,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         false,
         false,
@@ -211,7 +211,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         false,
         false,
@@ -244,7 +244,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         false,
         true,
@@ -282,7 +282,7 @@ describe('PatentService', () => {
       );
 
       expect(mockSerpApiClient.getPatentDetails).toHaveBeenCalledWith(
-        'US1234567'
+        'patent/US1234567/en'
       );
     });
 
@@ -309,7 +309,7 @@ describe('PatentService', () => {
       await service.fetchPatentData('patent/US1234567/en');
 
       expect(mockSerpApiClient.getPatentDetails).toHaveBeenCalledWith(
-        'US1234567'
+        'patent/US1234567/en'
       );
     });
 
@@ -336,7 +336,7 @@ describe('PatentService', () => {
       await service.fetchPatentData('US1234567');
 
       expect(mockSerpApiClient.getPatentDetails).toHaveBeenCalledWith(
-        'US1234567'
+        'patent/US1234567/en'
       );
     });
   });
@@ -366,7 +366,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         true,
         false,
@@ -413,7 +413,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         true,
         false,
         false,
@@ -449,7 +449,7 @@ describe('PatentService', () => {
       );
 
       const result = await service.fetchPatentData(
-        'US1234567',
+        'patent/US1234567/en',
         false,
         true,
         false,
@@ -465,7 +465,7 @@ describe('PatentService', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle SerpAPI errors gracefully', async () => {
+    it('should throw error when SerpAPI returns error', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -483,15 +483,39 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData('INVALID');
+      await expect(service.fetchPatentData('INVALID')).rejects.toThrow('SerpAPI error');
+    });
 
-      expect(result).toEqual({});
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Error fetching patent data')
+    it('should throw error when SerpAPI returns empty response', async () => {
+      const mockLogger = {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      const mockSerpApiClient = {
+        getPatentDetails: vi.fn().mockResolvedValue({
+          error: 'Google Patents Details hasn\'t returned any results for this query.',
+          search_metadata: {
+            status: 'Success',
+            results_state: 'Fully empty'
+          }
+        }),
+      };
+
+      const { PatentService } = await import('../../../src/services/patent.js');
+      const service = new PatentService(
+        mockSerpApiClient as never,
+        mockLogger as never
+      );
+
+      await expect(service.fetchPatentData('FI20236453A1')).rejects.toThrow(
+        'Google Patents Details hasn\'t returned any results for this query.'
       );
     });
 
-    it('should handle network errors', async () => {
+    it('should throw error for network errors', async () => {
       const mockLogger = {
         info: vi.fn(),
         warn: vi.fn(),
@@ -509,9 +533,7 @@ describe('PatentService', () => {
         mockLogger as never
       );
 
-      const result = await service.fetchPatentData('US1234567');
-
-      expect(result).toEqual({});
+      await expect(service.fetchPatentData('US1234567')).rejects.toThrow('Network error');
     });
   });
 });

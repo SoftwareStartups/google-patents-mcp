@@ -89,6 +89,11 @@ export interface SerpApiPatentDetailsResponse {
   filing_date?: string;
   grant_date?: string;
   publication_date?: string;
+  error?: string;
+  search_metadata?: {
+    status?: string;
+    results_state?: string;
+  };
   [key: string]: unknown;
 }
 
