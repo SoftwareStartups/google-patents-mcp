@@ -1,0 +1,42 @@
+name: 'Setup Node.js Environment'
+description: 'Setup Node.js, install dependencies, and optionally build the project'
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: true
+  install-deps:
+    description: 'Whether to install dependencies'
+    required: false
+    default: 'true'
+  build-project:
+    description: 'Whether to build the project'
+    required: false
+    default: 'false'
+  cache-key:
+    description: 'Cache key for npm dependencies'
+    required: false
+    default: 'npm'
+  cache-dependency-path:
+    description: 'Path to dependency files for cache invalidation'
+    required: false
+    default: 'package-lock.json'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache-key }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Install dependencies
+      if: inputs.install-deps == 'true'
+      shell: bash
+      run: npm ci
+
+    - name: Build project
+      if: inputs.build-project == 'true'
+      shell: bash
+      run: npm run build
