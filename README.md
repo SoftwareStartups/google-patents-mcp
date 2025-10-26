@@ -374,24 +374,46 @@ npm run dev
 
 ## Testing
 
-The project includes unit tests and integration tests:
+The project includes unit tests, integration tests, and end-to-end tests with real API calls:
 
 ```bash
 # Install dependencies and build
-npm install
-npm run build
+make install
+make build
 
 # Set up environment variables (see Development Setup section above)
+# The e2e tests will automatically load SERPAPI_API_KEY from .env file
 
-# Run all tests
-npm test
+# Run all tests (unit + integration)
+make test
 
 # Run unit tests only
-npm run test:unit
+make test-unit
 
 # Run integration tests only
-npm run test:integration
+make test-integration
+
+# Run end-to-end tests with real SerpAPI calls
+make test-e2e
+
+# Run all tests including e2e
+make test-all
 ```
+
+### Test Types
+
+- **Unit Tests**: Test individual functions and classes in isolation
+- **Integration Tests**: Test the MCP server functionality with mocked API responses
+- **End-to-End Tests**: Test complete workflows with real SerpAPI calls
+
+The end-to-end tests validate that the server can successfully:
+- Search for patents using real SerpAPI queries
+- Fetch patent content with claims, descriptions, and metadata
+- Handle various search filters and parameters
+- Process patent family members and citations
+- Complete full workflows from search to content retrieval
+
+**Note**: End-to-end tests automatically load `SERPAPI_API_KEY` from the `.env` file and will make actual API calls, which may consume your SerpAPI quota.
 
 ## Logging
 
