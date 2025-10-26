@@ -122,7 +122,7 @@ class IntegrationTest {
       env: {
         ...process.env,
         SERPAPI_API_KEY: process.env.SERPAPI_API_KEY,
-        LOG_LEVEL: 'error', // Reduce noise during testing
+        LOG_LEVEL: 'info', // Show info level logs for debugging
       },
     });
 

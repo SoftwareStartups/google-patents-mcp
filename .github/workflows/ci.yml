@@ -131,17 +131,5 @@ jobs:
       - name: Run integration tests
         env:
           SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
-          LOG_LEVEL: error
+          LOG_LEVEL: info
         run: npm run test:integration
-
-      - name: Upload test logs
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: integration-test-logs-node-${{ matrix.node-version }}
-          path: |
-            *.log
-            /tmp/google-patents-server.log
-          if-no-files-found: ignore
-          retention-days: 1
-          compression-level: 6
