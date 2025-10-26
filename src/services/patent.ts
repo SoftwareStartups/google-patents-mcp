@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import winston from 'winston';
 import type {
     PatentCitations,
@@ -53,20 +54,35 @@ export class PatentService {
   }
 
   /**
-   * Extracts patent family members from SerpAPI country_status data
+   * Extracts patent family members from SerpAPI worldwide_applications data
    */
   private extractFamilyMembers(
     details: SerpApiPatentDetailsResponse
   ): PatentFamilyMember[] {
-    if (!details.country_status || !Array.isArray(details.country_status)) {
+    if (!details.worldwide_applications) {
       return [];
     }
 
-    return details.country_status.map((country) => ({
-      patent_id: country.publication_number || `${country.country}_unknown`,
-      region: country.country,
-      status: country.status,
-    }));
+    const familyMembers: PatentFamilyMember[] = [];
+
+    for (const yearApplications of Object.values(details.worldwide_applications)) {
+      if (Array.isArray(yearApplications)) {
+        for (const app of yearApplications) {
+          if (app.document_id && app.country_code && app.legal_status) {
+            // Skip the main application (this_app is true)
+            if (!app.this_app) {
+              familyMembers.push({
+                patent_id: app.document_id,
+                region: app.country_code,
+                status: app.legal_status,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return familyMembers;
   }
 
   /**
@@ -75,21 +91,53 @@ export class PatentService {
   private extractCitations(
     details: SerpApiPatentDetailsResponse
   ): PatentCitations | undefined {
-    if (!details.citations) {
+    const forwardCitations = details.patent_citations?.original?.length || 0;
+    const backwardCitations = details.cited_by?.original?.length || 0;
+    const familyToFamilyCitations =
+      details.patent_citations?.family_to_family?.length;
+
+    // Only return if we have at least some citation data
+    if (forwardCitations === 0 && backwardCitations === 0) {
       return undefined;
     }
 
     return {
-      forward_citations: details.citations.forward_citations || 0,
-      backward_citations: details.citations.backward_citations || 0,
-      family_to_family_citations: details.citations.family_to_family_citations,
+      forward_citations: forwardCitations,
+      backward_citations: backwardCitations,
+      family_to_family_citations: familyToFamilyCitations,
     };
+  }
+
+  /**
+   * Fetches description text from SerpAPI description_link
+   */
+  private async fetchDescription(descriptionLink: string): Promise<string | undefined> {
+    try {
+      const response = await fetch(descriptionLink);
+      const htmlText = await response.text();
+
+      // Extract description content from HTML - get everything inside the main description div
+      const descriptionMatch = htmlText.match(/<div[^>]*class="description"[^>]*>(.*?)(?=<\/body>|$)/is);
+      if (descriptionMatch) {
+        // Clean up HTML tags and return plain text
+        const description = descriptionMatch[1]
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+
+        return description.length > 0 ? description : undefined;
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to fetch description from ${descriptionLink}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return undefined;
   }
 
   /**
    * Formats content based on include parameters and applies truncation
    */
-  private formatContent(
+  private async formatContent(
     details: SerpApiPatentDetailsResponse,
     includeClaims: boolean,
     includeDescription: boolean,
@@ -97,12 +145,12 @@ export class PatentService {
     includeCitations: boolean,
     includeMetadata: boolean,
     maxLength?: number
-  ): PatentData {
+  ): Promise<PatentData> {
     const result: PatentData = {};
 
-    // Add patent ID
-    if (details.patent_id) {
-      result.patent_id = details.patent_id;
+    // Add patent ID (from publication_number)
+    if (details.publication_number) {
+      result.patent_id = details.publication_number;
     }
 
     // Add metadata if requested
@@ -110,23 +158,31 @@ export class PatentService {
       if (details.title) result.title = details.title;
       if (details.publication_number)
         result.publication_number = details.publication_number;
-      if (details.assignee) result.assignee = details.assignee;
-      if (details.inventor) result.inventor = details.inventor;
+      // Extract assignee from assignees array
+      if (details.assignees && details.assignees.length > 0) {
+        result.assignee = details.assignees[0];
+      }
+      // Extract inventor from inventors array
+      if (details.inventors && details.inventors.length > 0) {
+        result.inventor = details.inventors[0].name;
+      }
       if (details.priority_date) result.priority_date = details.priority_date;
       if (details.filing_date) result.filing_date = details.filing_date;
-      if (details.grant_date) result.grant_date = details.grant_date;
       if (details.publication_date)
         result.publication_date = details.publication_date;
       if (details.abstract) result.abstract = details.abstract;
     }
 
     // Add description if requested
-    if (includeDescription && details.description) {
-      let description = details.description;
-      if (maxLength && description.length > maxLength) {
-        description = this.truncateText(description, maxLength);
+    if (includeDescription && details.description_link) {
+      const description = await this.fetchDescription(details.description_link);
+      if (description) {
+        let processedDescription = description;
+        if (maxLength && processedDescription.length > maxLength) {
+          processedDescription = this.truncateText(processedDescription, maxLength);
+        }
+        result.description = processedDescription;
       }
-      result.description = description;
     }
 
     // Add claims if requested
@@ -222,12 +278,17 @@ export class PatentService {
     const details = await this.serpApiClient.getPatentDetails(patentId);
 
     // Validate that the response contains meaningful data
-    if (details.error || (!details.patent_id && !details.title && !details.description && !details.abstract)) {
-      const errorMessage = details.error || `No patent data found for patent ID: ${patentId}. The patent may not exist in the database or may not be accessible.`;
+    if (
+      details.error ||
+      (!details.title && !details.abstract && !details.publication_number)
+    ) {
+      const errorMessage =
+        details.error ||
+        `No patent data found for patent ID: ${patentId}. The patent may not exist in the database or may not be accessible.`;
       throw new Error(errorMessage);
     }
 
-    return this.formatContent(
+    return await this.formatContent(
       details,
       includeClaims,
       includeDescription,

@@ -67,28 +67,44 @@ export interface SerpApiResponse {
 }
 
 export interface SerpApiPatentDetailsResponse {
-  patent_id?: string;
   title?: string;
-  description?: string;
-  abstract?: string;
-  claims?: string[];
-  country_status?: Array<{
-    country: string;
-    status: string;
-    publication_number?: string;
-  }>;
-  citations?: {
-    forward_citations?: number;
-    backward_citations?: number;
-    family_to_family_citations?: number;
-  };
   publication_number?: string;
-  assignee?: string;
-  inventor?: string;
+  assignees?: string[];
+  inventors?: Array<{
+    name: string;
+    link?: string;
+    serpapi_link?: string;
+  }>;
   priority_date?: string;
   filing_date?: string;
-  grant_date?: string;
   publication_date?: string;
+  abstract?: string;
+  description_link?: string;
+  claims?: string[];
+  worldwide_applications?: Record<string, Array<{
+    application_number: string;
+    country_code: string;
+    document_id: string;
+    filing_date: string;
+    legal_status: string;
+    legal_status_cat: string;
+    this_app?: boolean;
+  }>>;
+  patent_citations?: {
+    original?: Array<{
+      publication_number: string;
+      title: string;
+      [key: string]: unknown;
+    }>;
+    family_to_family?: Array<unknown>;
+  };
+  cited_by?: {
+    original?: Array<{
+      publication_number: string;
+      title: string;
+      [key: string]: unknown;
+    }>;
+  };
   error?: string;
   search_metadata?: {
     status?: string;
