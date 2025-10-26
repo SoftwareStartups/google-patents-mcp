@@ -36,13 +36,6 @@ const colors = {
   cyan: '\x1b[36m',
 };
 
-interface TestResult {
-  name: string;
-  passed: boolean;
-  error?: string;
-  duration: number;
-}
-
 interface SerpApiResponse {
   search_metadata?: {
     status?: string;
@@ -67,8 +60,6 @@ interface ToolResponse {
 class IntegrationTest {
   private client: Client | null = null;
   private transport: StdioClientTransport | null = null;
-  private results: TestResult[] = [];
-  private startTime: number = 0;
   private readonly testTimeout = 60000; // 60 seconds per test
 
   constructor() {}
@@ -88,14 +79,13 @@ class IntegrationTest {
     try {
       await testFn();
       const duration = Date.now() - start;
-      this.results.push({ name, passed: true, duration });
       this.log(`✓ Passed: ${name} (${duration}ms)`, colors.green);
     } catch (error) {
       const duration = Date.now() - start;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.results.push({ name, passed: false, error: errorMsg, duration });
       this.log(`✗ Failed: ${name} (${duration}ms)`, colors.red);
       this.log(`  Error: ${errorMsg}`, colors.red);
+      throw error; // Re-throw to stop execution on failure
     }
   }
 
@@ -378,18 +368,15 @@ class IntegrationTest {
     }
 
     const content = JSON.parse(text) as {
-      content_included: boolean;
       claims?: string[];
       description?: string;
       full_text?: string;
     };
 
-    this.log(
-      `  Content fetched: ${content.content_included ? 'yes' : 'no'}`,
-      colors.cyan
-    );
+    const hasContent = Object.keys(content).length > 0;
+    this.log(`  Content fetched: ${hasContent ? 'yes' : 'no'}`, colors.cyan);
 
-    if (content.content_included) {
+    if (hasContent) {
       this.log(
         `  Has claims: ${content.claims ? 'yes' : 'no'}, Has description: ${content.description ? 'yes' : 'no'}`,
         colors.cyan
@@ -416,11 +403,14 @@ class IntegrationTest {
     }
 
     const content = JSON.parse(text) as {
-      content_included: boolean;
+      claims?: string[];
+      description?: string;
+      full_text?: string;
     };
 
+    const hasContent = Object.keys(content).length > 0;
     this.log(
-      `  Content fetched by ID: ${content.content_included ? 'yes' : 'no'}`,
+      `  Content fetched by ID: ${hasContent ? 'yes' : 'no'}`,
       colors.cyan
     );
   }
@@ -484,16 +474,18 @@ class IntegrationTest {
     }
 
     const content = JSON.parse(contentText) as {
-      content_included: boolean;
       claims?: string[];
+      description?: string;
+      full_text?: string;
     };
 
+    const hasContent = Object.keys(content).length > 0;
     this.log(
-      `  Step 2: Fetched content for first patent (${content.content_included ? 'success' : 'no content'})`,
+      `  Step 2: Fetched content for first patent (${hasContent ? 'success' : 'no content'})`,
       colors.cyan
     );
 
-    if (content.content_included && content.claims) {
+    if (hasContent && content.claims) {
       this.log(`  Retrieved ${content.claims.length} claims`, colors.cyan);
     }
   }
@@ -546,44 +538,7 @@ class IntegrationTest {
     return data;
   }
 
-  private printSummary(): void {
-    const totalTests = this.results.length;
-    const passedTests = this.results.filter((r) => r.passed).length;
-    const failedTests = totalTests - passedTests;
-    const totalDuration = Date.now() - this.startTime;
-
-    this.log('\n' + '='.repeat(60), colors.blue);
-    this.log('TEST SUMMARY', colors.blue);
-    this.log('='.repeat(60), colors.blue);
-
-    this.results.forEach((result) => {
-      const icon = result.passed ? '✓' : '✗';
-      const color = result.passed ? colors.green : colors.red;
-      this.log(`${icon} ${result.name} (${result.duration}ms)`, color);
-      if (result.error) {
-        this.log(`  └─ ${result.error}`, colors.red);
-      }
-    });
-
-    this.log('\n' + '-'.repeat(60), colors.blue);
-    this.log(
-      `Total: ${totalTests} | Passed: ${passedTests} | Failed: ${failedTests}`,
-      colors.blue
-    );
-    this.log(`Duration: ${totalDuration}ms`, colors.blue);
-    this.log('='.repeat(60), colors.blue);
-
-    if (failedTests > 0) {
-      this.log('\n❌ INTEGRATION TESTS FAILED', colors.red);
-      process.exit(1);
-    } else {
-      this.log('\n✅ INTEGRATION TESTS PASSED', colors.green);
-      process.exit(0);
-    }
-  }
-
   async run(): Promise<void> {
-    this.startTime = Date.now();
     this.log('\n' + '='.repeat(60), colors.blue);
     this.log(
       '🧪 Google Patents MCP Server - Integration Test Suite',
@@ -597,53 +552,52 @@ class IntegrationTest {
         await this.setupClient();
       });
 
-      // Run tests only if setup succeeded
-      if (this.results[0].passed) {
-        await this.runTest('List Tools', async () => {
-          await this.testListTools();
-        });
+      // Run all tests
+      await this.runTest('List Tools', async () => {
+        await this.testListTools();
+      });
 
-        await this.runTest('Basic Patent Search', async () => {
-          await this.testBasicSearch();
-        });
+      await this.runTest('Basic Patent Search', async () => {
+        await this.testBasicSearch();
+      });
 
-        await this.runTest('Search with Filters', async () => {
-          await this.testSearchWithFilters();
-        });
+      await this.runTest('Search with Filters', async () => {
+        await this.testSearchWithFilters();
+      });
 
-        await this.runTest('Search with Pagination', async () => {
-          await this.testSearchWithPagination();
-        });
+      await this.runTest('Search with Pagination', async () => {
+        await this.testSearchWithPagination();
+      });
 
-        await this.runTest('Search with Sorting', async () => {
-          await this.testSearchWithSorting();
-        });
+      await this.runTest('Search with Sorting', async () => {
+        await this.testSearchWithSorting();
+      });
 
-        await this.runTest('Search with Inventor/Assignee', async () => {
-          await this.testSearchWithInventorAndAssignee();
-        });
+      await this.runTest('Search with Inventor/Assignee', async () => {
+        await this.testSearchWithInventorAndAssignee();
+      });
 
-        await this.runTest('Get Patent Content by URL', async () => {
-          await this.testGetPatentContentByUrl();
-        });
+      await this.runTest('Get Patent Content by URL', async () => {
+        await this.testGetPatentContentByUrl();
+      });
 
-        await this.runTest('Get Patent Content by ID', async () => {
-          await this.testGetPatentContentById();
-        });
+      await this.runTest('Get Patent Content by ID', async () => {
+        await this.testGetPatentContentById();
+      });
 
-        await this.runTest('Workflow: Search then Get Content', async () => {
-          await this.testSearchThenGetContent();
-        });
-      }
+      await this.runTest('Workflow: Search then Get Content', async () => {
+        await this.testSearchThenGetContent();
+      });
+
+      this.log('\n✅ INTEGRATION TESTS PASSED', colors.green);
+      process.exit(0);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.log(`\n❌ Unexpected error: ${errorMsg}`, colors.red);
+      process.exit(1);
     } finally {
       // Cleanup
       await this.teardownClient();
-
-      // Print summary
-      this.printSummary();
     }
   }
 }
