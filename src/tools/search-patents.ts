@@ -31,10 +31,9 @@ export const searchPatentsToolDefinition: Tool = {
       },
       sort: {
         type: 'string',
-        enum: ['relevance', 'new', 'old'],
+        enum: ['new', 'old'],
         description:
-          "Sorting method. 'relevance' (default), 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).",
-        default: 'relevance',
+          "Sorting method. 'new' (newest by filing/publication date), 'old' (oldest by filing/publication date).",
       },
       before: {
         type: 'string',

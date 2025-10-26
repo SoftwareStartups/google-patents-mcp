@@ -384,7 +384,7 @@ class RealApiE2ETest {
         before: 'publication:20231231',
         status: 'GRANT',
         type: 'PATENT',
-        sort: 'relevance',
+        sort: 'new',
       },
     })) as ToolResponse;
 

@@ -2,7 +2,7 @@ export interface SearchPatentsArgs {
   q?: string;
   page?: number;
   num?: number;
-  sort?: 'relevance' | 'new' | 'old';
+  sort?: 'new' | 'old';
   before?: string;
   after?: string;
   inventor?: string;
