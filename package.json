@@ -1,6 +1,6 @@
 {
   "name": "@softwarestartups/patentscope",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "CLI and MCP server for searching Google Patents via SerpApi",
   "main": "build/index.js",
   "type": "module",
