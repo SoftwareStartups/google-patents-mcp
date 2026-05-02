@@ -1,9 +1,0 @@
-node_modules/
-build/
-.git/
-.worktrees/
-worktrees/
-*.env
-.env*
-tests/
-coverage/
