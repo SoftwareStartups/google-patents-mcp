@@ -7,6 +7,7 @@ import {
   mock,
   spyOn,
 } from 'bun:test';
+import { createMockLogger } from '../../../helpers/test-utils.js';
 
 const mockSearchPatents = mock();
 
@@ -26,13 +27,7 @@ await mock.module('../../../../src/config.js', () => ({
 }));
 
 await mock.module('../../../../src/logger.js', () => ({
-  createLogger: () => ({
-    error: mock(),
-    info: mock(),
-    debug: mock(),
-    warn: mock(),
-    close: mock(),
-  }),
+  createLogger: () => createMockLogger(),
 }));
 
 await mock.module('../../../../src/services/serpapi.js', () => ({

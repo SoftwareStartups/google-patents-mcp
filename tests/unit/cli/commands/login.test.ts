@@ -8,6 +8,7 @@ import {
   spyOn,
 } from 'bun:test';
 import { SerpApiError } from '../../../../src/errors.js';
+import { createMockLogger } from '../../../helpers/test-utils.js';
 
 const mockSetSecret = mock(() => Promise.resolve());
 const mockSanitizeCredential = mock((v: string) => v.trim());
@@ -26,13 +27,7 @@ await mock.module('../../../../src/auth/keychain.js', () => ({
 }));
 
 await mock.module('../../../../src/logger.js', () => ({
-  createLogger: () => ({
-    error: mock(),
-    info: mock(),
-    debug: mock(),
-    warn: mock(),
-    close: mock(),
-  }),
+  createLogger: () => createMockLogger(),
 }));
 
 await mock.module('../../../../src/services/serpapi.js', () => ({

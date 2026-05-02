@@ -1,13 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { SerpApiError } from '../../../src/errors.js';
 import { SerpApiClient } from '../../../src/services/serpapi.js';
+import { createMockLogger } from '../../helpers/test-utils.js';
 
-const mockLogger = {
-  info: mock(),
-  warn: mock(),
-  error: mock(),
-  debug: mock(),
-};
+let mockLogger: ReturnType<typeof createMockLogger>;
 
 function makeFetch(response: Partial<Response>) {
   return mock().mockResolvedValue(response);
@@ -17,10 +13,7 @@ let originalFetch: typeof fetch;
 
 beforeEach(() => {
   originalFetch = globalThis.fetch;
-  mockLogger.info.mockReset();
-  mockLogger.warn.mockReset();
-  mockLogger.error.mockReset();
-  mockLogger.debug.mockReset();
+  mockLogger = createMockLogger();
 });
 
 afterEach(() => {
@@ -40,7 +33,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_api_key', mockLogger as never);
+    const client = new SerpApiClient('test_api_key', mockLogger);
     await client.searchPatents({ q: 'quantum computer' });
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -61,7 +54,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_api_key', mockLogger as never);
+    const client = new SerpApiClient('test_api_key', mockLogger);
     await client.searchPatents({
       q: 'AI',
       page: 2,
@@ -96,7 +89,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_api_key', mockLogger as never);
+    const client = new SerpApiClient('test_api_key', mockLogger);
     const result = await client.searchPatents({ assignee: 'Skyfora', num: 10 });
 
     expect(result).toEqual(mockResponse);
@@ -116,7 +109,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('invalid_key', mockLogger as never);
+    const client = new SerpApiClient('invalid_key', mockLogger);
     await expect(client.searchPatents({ q: 'test' })).rejects.toThrow(
       'Authentication failed'
     );
@@ -131,7 +124,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('invalid_key', mockLogger as never);
+    const client = new SerpApiClient('invalid_key', mockLogger);
     try {
       await client.searchPatents({ q: 'test' });
       expect.unreachable('should have thrown');
@@ -152,7 +145,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('invalid_key', mockLogger as never);
+    const client = new SerpApiClient('invalid_key', mockLogger);
     try {
       await client.searchPatents({ q: 'test' });
       expect.unreachable('should have thrown');
@@ -173,7 +166,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_key', mockLogger as never);
+    const client = new SerpApiClient('test_key', mockLogger);
     try {
       await client.searchPatents({ q: 'test' });
       expect.unreachable('should have thrown');
@@ -192,7 +185,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_key', mockLogger as never);
+    const client = new SerpApiClient('test_key', mockLogger);
     try {
       await client.searchPatents({ q: 'test' });
       expect.unreachable('should have thrown');
@@ -213,7 +206,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('bad_key', mockLogger as never);
+    const client = new SerpApiClient('bad_key', mockLogger);
     try {
       await client.searchPatents({ q: 'test' });
       expect.unreachable('should have thrown');
@@ -235,10 +228,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient(
-      'secret_api_key_12345',
-      mockLogger as never
-    );
+    const client = new SerpApiClient('secret_api_key_12345', mockLogger);
     await client.searchPatents({ q: 'test' });
 
     const allLogCalls = [
@@ -263,7 +253,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_key', mockLogger as never, 100);
+    const client = new SerpApiClient('test_key', mockLogger, 100);
     await expect(client.searchPatents({ q: 'test' })).rejects.toThrow(
       'SerpApi request timed out'
     );
@@ -282,7 +272,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_api_key', mockLogger as never);
+    const client = new SerpApiClient('test_api_key', mockLogger);
     await client.getPatentDetails('US1234567');
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -304,7 +294,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('invalid_key', mockLogger as never);
+    const client = new SerpApiClient('invalid_key', mockLogger);
     await expect(client.getPatentDetails('INVALID')).rejects.toThrow(
       'SerpApi request failed'
     );
@@ -320,7 +310,7 @@ describe('SerpApiClient', () => {
     });
     globalThis.fetch = mockFetch as unknown as typeof fetch;
 
-    const client = new SerpApiClient('test_key', mockLogger as never, 100);
+    const client = new SerpApiClient('test_key', mockLogger, 100);
     await expect(client.getPatentDetails('US1234567')).rejects.toThrow(
       'SerpApi request timed out'
     );

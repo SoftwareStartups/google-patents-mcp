@@ -14,6 +14,9 @@ import {
 import { resolvePatentId } from '../utils/patent-id-resolver.js';
 
 export class PatentService {
+  private static readonly ALLOWED_DESCRIPTION_HOSTS: ReadonlySet<string> =
+    new Set(['patents.google.com', 'serpapi.com']);
+
   private readonly logger: Logger;
   private readonly serpApiClient: SerpApiClient;
 
@@ -22,12 +25,31 @@ export class PatentService {
     this.logger = logger;
   }
 
+  private isAllowedDescriptionUrl(urlString: string): boolean {
+    try {
+      const u = new URL(urlString);
+      return (
+        u.protocol === 'https:' &&
+        PatentService.ALLOWED_DESCRIPTION_HOSTS.has(u.hostname)
+      );
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Fetches description text from SerpAPI description_link
    */
   private async fetchDescription(
     descriptionLink: string
   ): Promise<string | undefined> {
+    if (!this.isAllowedDescriptionUrl(descriptionLink)) {
+      this.logger.warn(
+        `Refusing to fetch description from untrusted URL: ${descriptionLink}`
+      );
+      return undefined;
+    }
+
     try {
       const response = await fetch(descriptionLink);
       const htmlText = await response.text();

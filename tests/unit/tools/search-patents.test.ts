@@ -1,22 +1,15 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { createSearchPatentsTool } from '../../../src/tools/search-patents.js';
+import {
+  createMockLogger,
+  createMockSerpApiClient,
+} from '../../helpers/test-utils.js';
 
 describe('search_patents Tool', () => {
   it('should have correct tool definition', () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockSerpApiClient = {
-      searchPatents: mock(),
-    };
-
     const tool = createSearchPatentsTool(
-      mockSerpApiClient as never,
-      mockLogger as never
+      createMockSerpApiClient(),
+      createMockLogger()
     );
 
     expect(tool.definition.name).toBe('search_patents');
@@ -37,41 +30,18 @@ describe('search_patents Tool', () => {
   });
 
   it('should call serpApiClient.searchPatents with provided args', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
     const mockResponse = {
       search_metadata: { status: 'Success' },
-      organic_results: [
-        {
-          patent_id: 'US1234567',
-          title: 'Test Patent',
-        },
-      ],
+      organic_results: [{ patent_id: 'US1234567', title: 'Test Patent' }],
     };
+    const searchPatents = mock().mockResolvedValue(mockResponse);
+    const serpApi = createMockSerpApiClient({ searchPatents });
+    const tool = createSearchPatentsTool(serpApi, createMockLogger());
 
-    const mockSerpApiClient = {
-      searchPatents: mock().mockResolvedValue(mockResponse),
-    };
-
-    const tool = createSearchPatentsTool(
-      mockSerpApiClient as never,
-      mockLogger as never
-    );
-
-    const args = {
-      q: 'quantum computer',
-      num: 10,
-      status: 'GRANT',
-    };
-
+    const args = { q: 'quantum computer', num: 10, status: 'GRANT' };
     const result = await tool.handler(args);
 
-    expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith(args);
+    expect(searchPatents).toHaveBeenCalledWith(args);
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
     const text = (result.content[0] as { type: 'text'; text: string }).text;
@@ -79,63 +49,30 @@ describe('search_patents Tool', () => {
   });
 
   it('should handle errors from serpApiClient', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockSerpApiClient = {
+    const logger = createMockLogger();
+    const serpApi = createMockSerpApiClient({
       searchPatents: mock().mockRejectedValue(new Error('API Error')),
-    };
-
-    const tool = createSearchPatentsTool(
-      mockSerpApiClient as never,
-      mockLogger as never
-    );
+    });
+    const tool = createSearchPatentsTool(serpApi, logger);
 
     await expect(tool.handler({ q: 'test' })).rejects.toThrow('API Error');
-
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Error in search_patents handler')
     );
   });
 
   it('should work with empty query and only filters', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
     const mockResponse = {
-      organic_results: [
-        {
-          patent_id: 'FI127693B',
-          assignee: 'Skyfora Oy',
-        },
-      ],
+      organic_results: [{ patent_id: 'FI127693B', assignee: 'Skyfora Oy' }],
     };
+    const searchPatents = mock().mockResolvedValue(mockResponse);
+    const serpApi = createMockSerpApiClient({ searchPatents });
+    const tool = createSearchPatentsTool(serpApi, createMockLogger());
 
-    const mockSerpApiClient = {
-      searchPatents: mock().mockResolvedValue(mockResponse),
-    };
-
-    const tool = createSearchPatentsTool(
-      mockSerpApiClient as never,
-      mockLogger as never
-    );
-
-    const args = {
-      assignee: 'Skyfora',
-      num: 10,
-    };
-
+    const args = { assignee: 'Skyfora', num: 10 };
     const result = await tool.handler(args);
 
-    expect(mockSerpApiClient.searchPatents).toHaveBeenCalledWith(args);
+    expect(searchPatents).toHaveBeenCalledWith(args);
     expect(
       (result.content[0] as { type: 'text'; text: string }).text
     ).toContain('Skyfora Oy');

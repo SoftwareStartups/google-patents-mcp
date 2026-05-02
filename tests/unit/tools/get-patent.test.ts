@@ -1,23 +1,36 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { createGetPatentTool } from '../../../src/tools/get-patent.js';
+import {
+  createMockLogger,
+  createMockPatentService,
+} from '../../helpers/test-utils.js';
+
+const DEFAULT_INCLUDE = {
+  includeClaims: false,
+  includeDescription: false,
+  includeAbstract: true,
+  includeFamilyMembers: false,
+  includeCitations: false,
+  includeMetadata: true,
+  maxLength: undefined,
+};
+
+const NONE_INCLUDE = {
+  includeClaims: false,
+  includeDescription: false,
+  includeAbstract: false,
+  includeFamilyMembers: false,
+  includeCitations: false,
+  includeMetadata: false,
+  maxLength: undefined,
+};
 
 describe('get_patent Tool', () => {
   it('should have correct tool definition', () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock(),
-    };
-
     const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
+      createMockPatentService(),
+      createMockLogger()
     );
 
     expect(tool.definition.name).toBe('get_patent');
@@ -30,45 +43,21 @@ describe('get_patent Tool', () => {
   });
 
   it('should call patentService.fetchPatentData with patent_url and default include', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
     const mockPatentData = {
       patent_id: 'US1234567',
       title: 'Test Patent',
       abstract: 'Test abstract',
     };
+    const fetchPatentData = mock().mockResolvedValue(mockPatentData);
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    const args = {
-      patent_url: 'https://patents.google.com/patent/US1234567',
-    };
-
+    const args = { patent_url: 'https://patents.google.com/patent/US1234567' };
     const result = await tool.handler(args);
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: false,
-        includeDescription: false,
-        includeAbstract: true,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: true,
-        maxLength: undefined,
-      }
+      DEFAULT_INCLUDE
     );
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
@@ -77,108 +66,47 @@ describe('get_patent Tool', () => {
   });
 
   it('should call patentService.fetchPatentData with patent_id and default include', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
+    const mockPatentData = { patent_id: 'US1234567', title: 'Test Patent' };
+    const fetchPatentData = mock().mockResolvedValue(mockPatentData);
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
-    const mockPatentData = {
-      patent_id: 'US1234567',
-      title: 'Test Patent',
-    };
+    const result = await tool.handler({ patent_id: 'US1234567A' });
 
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    const args = {
-      patent_id: 'US1234567A',
-    };
-
-    const result = await tool.handler(args);
-
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
-      'US1234567A',
-      {
-        includeClaims: false,
-        includeDescription: false,
-        includeAbstract: true,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: true,
-        maxLength: undefined,
-      }
-    );
+    expect(fetchPatentData).toHaveBeenCalledWith('US1234567A', DEFAULT_INCLUDE);
     expect(result.content[0].type).toBe('text');
     const text = (result.content[0] as { type: 'text'; text: string }).text;
     expect(JSON.parse(text)).toEqual(mockPatentData);
   });
 
   it('should prefer patent_url over patent_id when both provided', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       title: 'Test',
-    };
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    const args = {
+    await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       patent_id: 'US7654321',
-    };
+    });
 
-    await tool.handler(args);
-
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       expect.any(Object)
     );
   });
 
   it('should throw error when neither patent_url nor patent_id provided', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
+    const fetchPatentData = mock();
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
-    const mockPatentService = {
-      fetchPatentData: mock(),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    const args = {};
-
-    await expect(tool.handler(args)).rejects.toThrow();
+    await expect(tool.handler({})).rejects.toThrow();
 
     try {
-      await tool.handler(args);
+      await tool.handler({});
     } catch (error) {
       expect(error).toHaveProperty('code', ErrorCode.InvalidParams);
       expect(error).toHaveProperty('message');
@@ -188,115 +116,62 @@ describe('get_patent Tool', () => {
       );
     }
 
-    expect(mockPatentService.fetchPatentData).not.toHaveBeenCalled();
+    expect(fetchPatentData).not.toHaveBeenCalled();
   });
 
   it('should handle errors from patentService', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentService = {
+    const logger = createMockLogger();
+    const patentService = createMockPatentService({
       fetchPatentData: mock().mockRejectedValue(new Error('Fetch failed')),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const tool = createGetPatentTool(patentService, logger);
 
     await expect(
       tool.handler({ patent_url: 'https://patents.google.com/patent/US123' })
     ).rejects.toThrow('Fetch failed');
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Error in get_patent handler')
     );
   });
 
   it('should include only claims when specified', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       claims: ['Claim 1'],
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       include: ['claims'],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: true,
-        includeDescription: false,
-        includeAbstract: false,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: false,
-        maxLength: undefined,
-      }
+      { ...NONE_INCLUDE, includeClaims: true }
     );
   });
 
   it('should return only requested content based on include array', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
     const mockPatentData = {
       patent_id: 'US1234567',
       description: 'Test description only',
     };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    const fetchPatentData = mock().mockResolvedValue(mockPatentData);
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     const result = await tool.handler({
       patent_id: 'US1234567A',
       include: ['description'],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
-      'US1234567A',
-      {
-        includeClaims: false,
-        includeDescription: true,
-        includeAbstract: false,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: false,
-        maxLength: undefined,
-      }
-    );
+    expect(fetchPatentData).toHaveBeenCalledWith('US1234567A', {
+      ...NONE_INCLUDE,
+      includeDescription: true,
+    });
 
     const text = (result.content[0] as { type: 'text'; text: string }).text;
     const parsedData = JSON.parse(text) as {
@@ -310,67 +185,31 @@ describe('get_patent Tool', () => {
   });
 
   it('should pass max_length parameter to service', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       abstract: 'Truncated abstract',
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       max_length: 1000,
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: false,
-        includeDescription: false,
-        includeAbstract: true,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: true,
-        maxLength: 1000,
-      }
+      { ...DEFAULT_INCLUDE, maxLength: 1000 }
     );
   });
 
   it('should handle max_length with selective content sections', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       claims: ['Claim 1'],
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_id: 'US1234567A',
@@ -378,133 +217,68 @@ describe('get_patent Tool', () => {
       max_length: 500,
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
-      'US1234567A',
-      {
-        includeClaims: true,
-        includeDescription: false,
-        includeAbstract: false,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: false,
-        maxLength: 500,
-      }
-    );
+    expect(fetchPatentData).toHaveBeenCalledWith('US1234567A', {
+      ...NONE_INCLUDE,
+      includeClaims: true,
+      maxLength: 500,
+    });
   });
 
   it('should handle empty include array by defaulting to metadata and abstract', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       title: 'Test Patent',
       abstract: 'Test abstract',
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       include: [],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: false,
-        includeDescription: false,
-        includeAbstract: true,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: true,
-        maxLength: undefined,
-      }
+      DEFAULT_INCLUDE
     );
   });
 
   it('should handle case-insensitive include values', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       claims: ['Claim 1'],
       description: 'Test description',
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       include: ['CLAIMS', 'Description'],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: true,
-        includeDescription: true,
-        includeAbstract: false,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: false,
-        maxLength: undefined,
-      }
+      { ...NONE_INCLUDE, includeClaims: true, includeDescription: true }
     );
   });
 
   it('should throw error for invalid include value', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
+    const fetchPatentData = mock();
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
-    const mockPatentService = {
-      fetchPatentData: mock(),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
-
-    await expect(
+    const callWithInvalid = () =>
       tool.handler({
         patent_url: 'https://patents.google.com/patent/US1234567',
         include: ['invalid_section'],
-      })
-    ).rejects.toThrow();
+      });
+
+    await expect(callWithInvalid()).rejects.toThrow();
 
     try {
-      await tool.handler({
-        patent_url: 'https://patents.google.com/patent/US1234567',
-        include: ['invalid_section'],
-      });
+      await callWithInvalid();
     } catch (error) {
       expect(error).toHaveProperty('code', ErrorCode.InvalidParams);
       expect(error).toHaveProperty('message');
@@ -513,59 +287,30 @@ describe('get_patent Tool', () => {
       expect(errorMessage).toContain('invalid_section');
     }
 
-    expect(mockPatentService.fetchPatentData).not.toHaveBeenCalled();
+    expect(fetchPatentData).not.toHaveBeenCalled();
   });
 
   it('should include only abstract when specified', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       abstract: 'Test abstract only',
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
       include: ['abstract'],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
-      {
-        includeClaims: false,
-        includeDescription: false,
-        includeAbstract: true,
-        includeFamilyMembers: false,
-        includeCitations: false,
-        includeMetadata: false,
-        maxLength: undefined,
-      }
+      { ...NONE_INCLUDE, includeAbstract: true }
     );
   });
 
   it('should handle multiple include sections', async () => {
-    const mockLogger = {
-      info: mock(),
-      warn: mock(),
-      error: mock(),
-      debug: mock(),
-    };
-
-    const mockPatentData = {
+    const fetchPatentData = mock().mockResolvedValue({
       patent_id: 'US1234567',
       claims: ['Claim 1'],
       description: 'Test description',
@@ -574,16 +319,9 @@ describe('get_patent Tool', () => {
         { patent_id: 'EP1234567', region: 'EP', status: 'PENDING' },
       ],
       citations: { forward_citations: 10, backward_citations: 5 },
-    };
-
-    const mockPatentService = {
-      fetchPatentData: mock().mockResolvedValue(mockPatentData),
-    };
-
-    const tool = createGetPatentTool(
-      mockPatentService as never,
-      mockLogger as never
-    );
+    });
+    const patentService = createMockPatentService({ fetchPatentData });
+    const tool = createGetPatentTool(patentService, createMockLogger());
 
     await tool.handler({
       patent_url: 'https://patents.google.com/patent/US1234567',
@@ -597,7 +335,7 @@ describe('get_patent Tool', () => {
       ],
     });
 
-    expect(mockPatentService.fetchPatentData).toHaveBeenCalledWith(
+    expect(fetchPatentData).toHaveBeenCalledWith(
       'https://patents.google.com/patent/US1234567',
       {
         includeClaims: true,
