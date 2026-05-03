@@ -1,0 +1,14 @@
+{
+  "name": "softwarestartups-patentscope",
+  "owner": {
+    "name": "SoftwareStartups",
+    "url": "https://github.com/SoftwareStartups"
+  },
+  "plugins": [
+    {
+      "name": "patentscope",
+      "source": ".",
+      "description": "Google Patents search and retrieval via CLI. Activate when user mentions \"patent\", \"prior art\", \"IP\", \"intellectual property\", \"patent search\", \"claims\", or \"patent family\"."
+    }
+  ]
+}

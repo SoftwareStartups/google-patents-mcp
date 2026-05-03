@@ -21,6 +21,17 @@ bunx @softwarestartups/patentscope search "quantum computing"
 Pre-built binaries (no runtime required) are available on the
 [GitHub Releases](https://github.com/SoftwareStartups/patentscope/releases) page.
 
+## Use with Claude Code
+
+This repo is a Claude Code plugin marketplace. Install the companion skill so Claude Code can drive `patentscope` for you:
+
+```bash
+/plugin marketplace add SoftwareStartups/patentscope
+/plugin install patentscope@softwarestartups-patentscope
+```
+
+Once installed, just ask Claude in plain language (e.g., "Search patents for adaptive optics by Inventor X") and the skill will activate automatically. The plugin tracks this repo's releases — run `/plugin marketplace update softwarestartups-patentscope` to get the latest skill revisions.
+
 ## Prerequisites
 
 * **Bun:** Version 1.0 or higher (not needed when using a pre-built binary).
