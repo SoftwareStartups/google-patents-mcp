@@ -52,7 +52,7 @@ Applies to **every** `${{ }}` expression used inside a `run:` block — `github.
 
 - Triggers: push of `v*` tags
 - Permissions: `contents: write`, `actions: read`
-- Verifies CI passed for the tagged commit before building
+- CI verification happens in a single `verify-ci` job that the build matrix `needs:` (do not inline a `gh run watch` step in every matrix job — that saturates the installation rate limit when several tools release at once)
 - 6-platform binary matrix: linux-x64, linux-arm64, darwin-x64, darwin-arm64, windows-x64, windows-arm64
 - Binary naming: `patentscope-<os>-<arch>[.exe]`
 - Creates GitHub release with compiled binaries

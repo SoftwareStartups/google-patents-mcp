@@ -10,8 +10,40 @@ permissions:
   actions: read
 
 jobs:
+  verify-ci:
+    name: Verify CI passed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CI to complete on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Waiting for CI to complete for commit $COMMIT_SHA..."
+          for i in $(seq 1 20); do
+            RUN_ID=$(gh run list \
+              --repo "$REPO" \
+              --commit "$COMMIT_SHA" \
+              --workflow "CI" \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')
+            if [ -n "$RUN_ID" ]; then
+              break
+            fi
+            echo "CI run not found yet (attempt $i/20). Waiting 15s..."
+            sleep 15
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "No CI run found for commit $COMMIT_SHA. Aborting release."
+            exit 1
+          fi
+          gh run watch "$RUN_ID" --repo "$REPO" --exit-status
+
   build:
     name: Build ${{ matrix.target }}
+    needs: [verify-ci]
     strategy:
       matrix:
         include:
@@ -48,33 +80,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Verify CI passed for this commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMIT_SHA: ${{ github.sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          echo "Waiting for CI to complete for commit $COMMIT_SHA..."
-          for i in $(seq 1 20); do
-            RUN_ID=$(gh run list \
-              --repo "$REPO" \
-              --commit "$COMMIT_SHA" \
-              --workflow "CI" \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId // empty')
-            if [ -n "$RUN_ID" ]; then
-              break
-            fi
-            echo "CI run not found yet (attempt $i/20). Waiting 15s..."
-            sleep 15
-          done
-          if [ -z "$RUN_ID" ]; then
-            echo "No CI run found for commit $COMMIT_SHA. Aborting release."
-            exit 1
-          fi
-          gh run watch "$RUN_ID" --repo "$REPO" --exit-status
-
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
