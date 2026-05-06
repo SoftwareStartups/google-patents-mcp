@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "patentscope",
-      "source": ".",
+      "source": { "source": "github", "repo": "SoftwareStartups/patentscope" },
       "description": "Google Patents search and retrieval via CLI. Activate when user mentions \"patent\", \"prior art\", \"IP\", \"intellectual property\", \"patent search\", \"claims\", or \"patent family\"."
     }
   ]
