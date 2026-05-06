@@ -12,6 +12,14 @@ description: Google Patents search and retrieval via CLI. Activate when user men
 3. Set `SERPAPI_API_KEY` env var or run `patentscope login` before use
 4. Use `--include` with `get` to control response size — default is `metadata,abstract`
 5. Use `--max-length` on `get` to truncate long patent sections
+6. Never fetch `claims` or `description` unless specifically needed — they can be thousands of lines
+
+## Workflow
+
+| Need | Command | When |
+|------|---------|------|
+| Find patents on a topic | `patentscope search "query"` | Free-text search, optionally filter by date/inventor/assignee/country |
+| Get patent details | `patentscope get <patentId>` | Have a patent ID, need metadata/abstract/claims/description |
 
 ## Output
 
@@ -20,6 +28,19 @@ Default: human-readable text. With `--json`: raw JSON (no envelope).
 ```bash
 patentscope search "query" --json | jq '.[0] | {patent_id, title}'
 patentscope get US7654321B2 --json | jq '{title, abstract}'
+```
+
+For larger fetches, write to `.patents/` (gitignored) and read selectively:
+
+```bash
+mkdir -p .patents
+
+# Search — extract key fields only
+patentscope search "machine learning" --json | jq '[.[] | {title, patent_id, assignee, date}]' > .patents/search-ml.json
+
+# Fetch patent — write to disk, read selectively
+patentscope get US1234567A --include metadata,abstract --max-length 2000 --json > .patents/US1234567A.json
+jq '{title, abstract}' .patents/US1234567A.json
 ```
 
 ## Primary Workflow: Search and Retrieve
